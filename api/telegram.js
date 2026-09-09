@@ -317,30 +317,30 @@ function parseCommand(text, username) {
 
 function startMessageHtml(username) {
   return [
-    `<h1>🤖 ${htmlEscape(username)}</h1>`,
-    '<p><b>Official Telegram knowledge search</b></p>',
-    '<p>Ask questions about Telegram, bots, Bot API features and official bot terms. Answers come only from the official Telegram sources indexed by this bot.</p>',
-    '<details><summary>How to use</summary><ol><li>Tap <b>Search Telegram</b>.</li><li>Type your Telegram-related question after the bot username.</li><li>Choose the most relevant official answer.</li></ol></details>',
-    '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
-    '<tg-button-row align="center"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
-    '<footer>Source: Official Telegram documentation</footer>'
+    `<b>👋 Welcome to ${htmlEscape(username)}</b>`,
+    'Ask me a Telegram, Bot API or official bot-terms question.',
+    'I search the official Telegram knowledge base and return matching documentation.',
+    '',
+    'Use inline mode: type <code>@' + htmlEscape(username.replace(/^@/, '')) + ' your question</code>'
   ].join('\n');
 }
 
 function helpMessageHtml(username) {
   return [
-    `<h2>🧭 ${htmlEscape(username)} Help</h2>`,
-    '<p>Use inline mode to search the official Telegram knowledge base.</p>',
-    '<details><summary>Search tips</summary><ul><li>Use a short, specific question.</li><li>Include important Telegram or Bot API terms.</li><li>If nothing matches, try a different wording.</li></ul></details>',
-    '<p><b>Examples:</b> How do I create a bot? • What is inline mode? • How do webhooks work?</p>',
-    '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
-    '<tg-button-row align="center"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
-    '<footer>Source: Official Telegram documentation</footer>'
+    '<b>ℹ️ Help</b>',
+    'Ask a short, specific question about Telegram, bots, Bot API features or official bot terms.',
+    '',
+    'Examples:',
+    '• <code>How do I create a bot?</code>',
+    '• <code>What is inline mode?</code>',
+    '• <code>How do webhooks work?</code>',
+    '',
+    'Use inline mode: type <code>@' + htmlEscape(username.replace(/^@/, '')) + ' your question</code>'
   ].join('\n');
 }
 
 function pingMessageHtml() {
-  return '<h2>🏓 Pong!</h2><p>The bot is online and ready to search the official Telegram knowledge base.</p><footer>Source: Official Telegram documentation</footer>';
+  return '<b>🏓 Pong!</b> Bot is online.';
 }
 
 async function handleMessage(update, profile) {
