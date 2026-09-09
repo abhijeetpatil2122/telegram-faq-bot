@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "node --watch api/telegram.js",
-    "check": "node --check api/telegram.js && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs"
+    "check": "node --check api/telegram.js && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs",
+    "build": "npm run check"
   }
 }
