@@ -34,16 +34,31 @@ function normalize(value = '') {
 }
 
 function queryTokens(query) {
-  return normalize(query).split(' ').filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token));
+  return [...new Set(normalize(query).split(' ').filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token)))];
 }
 
 function tokenize(value) {
   return new Set(normalize(value).split(' ').filter(Boolean));
 }
 
-function searchableText(item) {
-  return [item.question, item.title, item.section, ...(item.aliases ?? []), ...(item.keywords ?? [])]
-    .filter(Boolean).map(normalize);
+function searchableFields(item) {
+  return {
+    question: normalize(item.question ?? ''),
+    title: normalize(item.title ?? ''),
+    section: normalize(item.section ?? ''),
+    aliases: (item.aliases ?? []).map(normalize).filter(Boolean),
+    keywords: (item.keywords ?? []).map(normalize).filter(Boolean)
+  };
+}
+
+function containsWholePhrase(field, query) {
+  return Boolean(field && query && (` ${field} `).includes(` ${query} `));
+}
+
+function tokenCoverage(tokens, field) {
+  if (!tokens.length || !field) return 0;
+  const fieldTokens = tokenize(field);
+  return tokens.filter((token) => fieldTokens.has(token)).length;
 }
 
 function score(item, query) {
@@ -51,22 +66,51 @@ function score(item, query) {
   const tokens = queryTokens(query);
   if (!normalizedQuery || !tokens.length) return 0;
 
-  const fields = searchableText(item);
-  const primary = normalize(item.question ?? item.title ?? '');
+  const fields = searchableFields(item);
+  const allFields = [fields.question, fields.title, fields.section, ...fields.aliases, ...fields.keywords].filter(Boolean);
+  const primary = fields.question || fields.title;
   const primaryTokens = tokenize(primary);
+  const uniqueTokenCount = tokens.length;
+  const matchedPrimary = tokenCoverage(tokens, primary);
+  const matchedTitle = tokenCoverage(tokens, fields.title);
+  const matchedSection = tokenCoverage(tokens, fields.section);
+  const matchedAliases = tokenCoverage(tokens, fields.aliases.join(' '));
+  const matchedKeywords = tokenCoverage(tokens, fields.keywords.join(' '));
   let points = 0;
 
-  for (const field of fields) {
-    if (field === normalizedQuery) points += 300;
-    else if (field.startsWith(normalizedQuery)) points += 160;
-    else if (field.includes(normalizedQuery)) points += 90;
-  }
+  if (fields.question === normalizedQuery) points += 1000;
+  if (fields.title === normalizedQuery) points += 900;
+  if (fields.section === normalizedQuery) points += 700;
 
-  const matchedPrimary = tokens.filter((token) => primaryTokens.has(token)).length;
-  const matchedFields = tokens.filter((token) => fields.some((field) => tokenize(field).has(token))).length;
-  points += matchedPrimary * 45 + matchedFields * 12;
-  if (tokens.length > 1 && matchedPrimary === tokens.length) points += 90;
-  if (tokens.length > 1 && matchedFields === tokens.length) points += 45;
+  if (containsWholePhrase(fields.question, normalizedQuery)) points += 420;
+  if (containsWholePhrase(fields.title, normalizedQuery)) points += 360;
+  if (containsWholePhrase(fields.section, normalizedQuery)) points += 220;
+  if (fields.aliases.some((field) => containsWholePhrase(field, normalizedQuery))) points += 300;
+  if (fields.keywords.some((field) => containsWholePhrase(field, normalizedQuery))) points += 180;
+
+  if (fields.question.startsWith(normalizedQuery)) points += 260;
+  else if (fields.title.startsWith(normalizedQuery)) points += 220;
+  else if (fields.section.startsWith(normalizedQuery)) points += 140;
+
+  if (fields.question.includes(normalizedQuery)) points += 140;
+  if (fields.title.includes(normalizedQuery)) points += 120;
+  if (fields.section.includes(normalizedQuery)) points += 80;
+
+  points += matchedPrimary * 90;
+  points += matchedTitle * 65;
+  points += matchedSection * 35;
+  points += matchedAliases * 45;
+  points += matchedKeywords * 20;
+
+  if (matchedPrimary === uniqueTokenCount) points += 260;
+  else if (matchedPrimary >= Math.max(1, uniqueTokenCount - 1)) points += 100;
+
+  const matchedAny = tokens.filter((token) => allFields.some((field) => tokenize(field).has(token))).length;
+  if (matchedAny === uniqueTokenCount) points += 120;
+  else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
+
+  if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
+
   return points;
 }
 
@@ -75,7 +119,7 @@ function searchKnowledge(query) {
   return KNOWLEDGE
     .map((item) => ({ item, score: score(item, query) }))
     .filter(({ score: itemScore }) => itemScore >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score || (a.item.title ?? '').localeCompare(b.item.title ?? ''))
+    .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title ?? '').localeCompare(b.item.question ?? b.item.title ?? ''))
     .map(({ item }) => item);
 }
 
@@ -94,10 +138,15 @@ function safeResultId(prefix, value) {
   return `${prefix}-${createHash('sha256').update(String(value)).digest('hex').slice(0, 32)}`;
 }
 
-function sourceTypeLabel(item) {
-  if (item.type === 'faq') return 'Telegram FAQ';
-  if (item.type === 'terms') return 'Official Telegram terms';
-  return 'Official Telegram guide';
+function safeButtonUrl(value) {
+  try {
+    const url = new URL(String(value ?? '').trim());
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    if (!url.hostname) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function renderAnswerHtml(item) {
@@ -108,20 +157,19 @@ function renderAnswerHtml(item) {
 
 function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
-  const sourceUrl = item.source?.url;
+  const sourceUrl = safeButtonUrl(item.source?.url);
   const sourceTitle = item.source?.title ?? 'Official Telegram source';
-  const sourceType = sourceTypeLabel(item);
+
   const sourceButton = sourceUrl
-    ? `<tg-button-row align="center"><tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">📖 Official source</tg-button></tg-button-row>`
+    ? `<tg-button-row align="center"><tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">📖 Open official source</tg-button></tg-button-row>`
     : '';
 
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
-    `<details open><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
+    `<details><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
     '<hr/>',
-    `<details><summary>About this answer</summary><p><b>Source:</b> ${htmlEscape(sourceTitle)}<br/><b>Type:</b> ${htmlEscape(sourceType)}</p></details>`,
-    sourceButton,
-    '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
+    `<footer>Source: ${htmlEscape(sourceTitle)}</footer>`,
+    sourceButton
   ].filter(Boolean).join('\n');
 }
 
@@ -134,7 +182,7 @@ function noResultsContent(query) {
         '<p>No matching answer was found in the official Telegram knowledge base.</p>',
         '<details><summary>How to search</summary><p>Try a short, specific Telegram or Bot API question such as <i>How do I create a bot?</i> or <i>What is inline mode?</i></p></details>',
         '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>',
-        '<footer>Official Telegram documentation only.</footer>'
+        '<footer>Source: Official Telegram documentation</footer>'
       ].join('\n')
     }
   };
@@ -153,7 +201,7 @@ function noResultsHelpArticle(query) {
           '<h2>🧭 Search help</h2>',
           `<p>${displayQuery ? `Nothing matched “${htmlEscape(displayQuery)}”. ` : ''}Try a short, specific question about Telegram, bots, Bot API features or official bot terms.</p>`,
           '<p><b>Examples:</b> How do I create a bot? • What is inline mode? • How do webhooks work?</p>',
-          '<footer>Official Telegram documentation only.</footer>'
+          '<footer>Source: Official Telegram documentation</footer>'
         ].join('\n')
       }
     }
@@ -183,10 +231,9 @@ function inlineResults(query, offset) {
   return {
     results: page.results.map((item) => ({
       type: 'article',
-      id: safeResultId('faq', item.id ?? item.title),
+      id: safeResultId('faq', item.id ?? item.question ?? item.title),
       title: item.question ?? item.title ?? 'Telegram documentation',
       description: item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source',
-      url: item.source?.url,
       thumbnail_url: ARTICLE_THUMBNAIL_URL,
       input_message_content: { rich_message: { html: renderRichAnswer(item) } }
     })),
@@ -246,7 +293,7 @@ function startMessageHtml(username) {
     '<details><summary>How to use</summary><ol><li>Tap <b>Search Telegram</b>.</li><li>Type your Telegram-related question after the bot username.</li><li>Choose the most relevant official answer.</li></ol></details>',
     '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
     '<tg-button-row align="center"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
-    '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
+    '<footer>Source: Official Telegram documentation</footer>'
   ].join('\n');
 }
 
@@ -256,7 +303,7 @@ function helpMessageHtml(username) {
     '<p>Use inline mode to search the official Telegram knowledge base.</p>',
     '<table bordered compact><tr><th>Command</th><th>Action</th></tr><tr><td><code>/start</code></td><td>Welcome + search</td></tr><tr><td><code>/help</code></td><td>Show help</td></tr><tr><td><code>/ping</code></td><td>Service + knowledge status</td></tr></table>',
     '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
-    '<footer>Answers are limited to indexed official Telegram documentation.</footer>'
+    '<footer>Source: Official Telegram documentation</footer>'
   ].join('\n');
 }
 
@@ -269,7 +316,7 @@ async function pingMessageHtml() {
     `<p><b>${htmlEscape(botUsername(profile))}</b> is online and responding.</p>`,
     `<table bordered compact><tr><th>Metric</th><th>Status</th></tr><tr><td>Telegram API</td><td>🟢 ${latency} ms</td></tr><tr><td>Knowledge base</td><td>🟢 ${KNOWLEDGE.length} entries</td></tr><tr><td>Official sources</td><td>🟢 ${SOURCE_COUNT} sources</td></tr></table>`,
     '<details><summary>About the database</summary><p>This bot does not use a runtime database. Its knowledge base is the generated <code>data/knowledge.json</code> file shipped with the deployment.</p></details>',
-    '<footer>Serverless • GitHub knowledge base • Vercel</footer>'
+    '<footer>Source: GitHub knowledge base • Vercel</footer>'
   ].join('\n');
 }
 
