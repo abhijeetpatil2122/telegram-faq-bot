@@ -2,42 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const SOURCES = [
-  {
-    id: 'telegram-faq',
-    title: 'Telegram FAQ',
-    url: 'https://telegram.org/faq',
-    kind: 'faq-q'
-  },
-  {
-    id: 'bots-faq',
-    title: 'Bots FAQ',
-    url: 'https://core.telegram.org/bots/faq',
-    kind: 'faq-h4'
-  },
-  {
-    id: 'bots',
-    title: 'Bots: An introduction for developers',
-    url: 'https://core.telegram.org/bots',
-    kind: 'guide'
-  },
-  {
-    id: 'bot-features',
-    title: 'Telegram Bot Features',
-    url: 'https://core.telegram.org/bots/features',
-    kind: 'guide'
-  },
-  {
-    id: 'bot-developer-terms',
-    title: 'Telegram Bot Developer Terms',
-    url: 'https://telegram.org/tos/bot-developers',
-    kind: 'terms'
-  },
-  {
-    id: 'bot-terms',
-    title: 'Telegram Bot Terms',
-    url: 'https://telegram.org/tos/bots',
-    kind: 'terms'
-  }
+  { id: 'telegram-faq', title: 'Telegram FAQ', url: 'https://telegram.org/faq', kind: 'faq-q' },
+  { id: 'bots-faq', title: 'Bots FAQ', url: 'https://core.telegram.org/bots/faq', kind: 'faq-h4' },
+  { id: 'bots', title: 'Bots: An introduction for developers', url: 'https://core.telegram.org/bots', kind: 'guide' },
+  { id: 'bot-features', title: 'Telegram Bot Features', url: 'https://core.telegram.org/bots/features', kind: 'guide' },
+  { id: 'bot-developer-terms', title: 'Telegram Bot Developer Terms', url: 'https://telegram.org/tos/bot-developers', kind: 'terms' },
+  { id: 'bot-terms', title: 'Telegram Bot Terms', url: 'https://telegram.org/tos/bots', kind: 'terms' }
 ];
 
 const USER_AGENT = 'telegram-faq-bot-crawler/1.1 (+https://github.com/abhijeetpatil2122/telegram-faq-bot)';
@@ -112,9 +82,7 @@ function sectionEnd(headings, index, currentLevel, htmlLength) {
 
 function nearestSection(headings, index, maxLevel = 3) {
   for (let previous = index - 1; previous >= 0; previous -= 1) {
-    if (headings[previous].level <= maxLevel && headings[previous].text) {
-      return headings[previous].text;
-    }
+    if (headings[previous].level <= maxLevel && headings[previous].text) return headings[previous].text;
   }
   return null;
 }
@@ -193,7 +161,7 @@ function extractGuideSections(html, source) {
     const text = stripTags(html.slice(start, end));
     if (text.length < 80) continue;
 
-    items.push(makeItem(source, heading.text, text, nearestSection(headings, index - 1, 2)));
+    items.push(makeItem(source, heading.text, text, nearestSection(headings, index, 2)));
   }
 
   return items;
@@ -221,15 +189,11 @@ async function fetchSource(source) {
 
 function extractSource(html, source) {
   switch (source.kind) {
-    case 'faq-q':
-      return extractFaqWithQ(html, source);
-    case 'faq-h4':
-      return extractFaqHeadings(html, source);
+    case 'faq-q': return extractFaqWithQ(html, source);
+    case 'faq-h4': return extractFaqHeadings(html, source);
     case 'guide':
-    case 'terms':
-      return extractGuideSections(html, source);
-    default:
-      throw new Error(`Unknown source parser: ${source.kind}`);
+    case 'terms': return extractGuideSections(html, source);
+    default: throw new Error(`Unknown source parser: ${source.kind}`);
   }
 }
 
@@ -240,9 +204,7 @@ for (const source of SOURCES) {
   const html = await fetchSource(source);
   const items = extractSource(html, source);
 
-  if (items.length === 0) {
-    throw new Error(`No knowledge entries extracted from ${source.url}`);
-  }
+  if (items.length === 0) throw new Error(`No knowledge entries extracted from ${source.url}`);
 
   console.log(`${source.id}: extracted ${items.length} ${source.kind} entries`);
   sourceStats.push({ id: source.id, entriesExtracted: items.length });
@@ -255,13 +217,10 @@ const byTitle = new Map();
 for (const item of all) {
   const key = normalize(item.title);
   const existing = byTitle.get(key);
-  if (!existing || item.answer.length > existing.answer.length) {
-    byTitle.set(key, item);
-  }
+  if (!existing || item.answer.length > existing.answer.length) byTitle.set(key, item);
 }
 
-const unique = [...byTitle.values()]
-  .sort((a, b) => a.title.localeCompare(b.title));
+const unique = [...byTitle.values()].sort((a, b) => a.title.localeCompare(b.title));
 
 const data = {
   schemaVersion: 1,
