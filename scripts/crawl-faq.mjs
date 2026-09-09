@@ -16,13 +16,16 @@ const root = path.resolve(process.cwd());
 const output = path.join(root, 'data', 'knowledge.json');
 
 const STOPWORDS = new Set([
-  'about', 'after', 'again', 'against', 'also', 'because', 'before', 'being', 'between',
-  'both', 'could', 'does', 'doing', 'during', 'each', 'from', 'have', 'having', 'here',
-  'into', 'just', 'more', 'most', 'other', 'over', 'same', 'some', 'such', 'than',
-  'that', 'their', 'them', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
-  'under', 'very', 'what', 'when', 'where', 'which', 'while', 'with', 'would', 'your',
-  'you', 'will', 'were', 'been', 'only', 'should', 'can', 'cannot', 'may', 'might',
-  'must', 'shall', 'doesn', 'isn', 'aren', 'wasn', 'weren', 'won', 'wouldn', 'telegram'
+  'about', 'after', 'again', 'against', 'also', 'and', 'are', 'because', 'before', 'being',
+  'been', 'between', 'both', 'but', 'can', 'cannot', 'could', 'did', 'does', 'doesn',
+  'doing', 'during', 'each', 'for', 'from', 'further', 'had', 'has', 'have', 'having',
+  'here', 'how', 'into', 'is', 'isn', 'it', 'its', 'just', 'may', 'might', 'more', 'most',
+  'must', 'not', 'now', 'of', 'on', 'only', 'or', 'other', 'our', 'ours', 'over', 'same',
+  'shall', 'should', 'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs',
+  'them', 'then', 'there', 'these', 'they', 'this', 'those', 'through', 'to', 'under',
+  'until', 'very', 'was', 'wasn', 'we', 'were', 'weren', 'what', 'when', 'where', 'which',
+  'while', 'who', 'whom', 'why', 'will', 'with', 'won', 'would', 'wouldn', 'you', 'your',
+  'yours', 'telegram'
 ]);
 
 function normalize(value = '') {
@@ -113,7 +116,7 @@ function loadDocument(html) {
   return { $, root: chooseContentRoot($) };
 }
 
-function sectionBlocks(root, headingIndex, nextHeadingIndex, nodes, $) {
+function sectionBlocks(headingIndex, nextHeadingIndex, nodes, $) {
   return nodes
     .slice(headingIndex + 1, nextHeadingIndex)
     .filter((node) => !/^h[1-6]$/i.test(node.name))
@@ -147,7 +150,7 @@ function extractSections(html, source, headingFilter) {
       }
     }
 
-    const answer = cleanAnswer(sectionBlocks(root, heading.index, end, nodes, $));
+    const answer = cleanAnswer(sectionBlocks(heading.index, end, nodes, $));
     if (answer.length < 20) continue;
 
     let section = null;
