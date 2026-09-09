@@ -2,23 +2,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const SOURCES = [
-  {
-    id: 'telegram-faq',
-    title: 'Telegram FAQ',
-    url: 'https://telegram.org/faq',
-    kind: 'faq'
-  },
-  {
-    id: 'bots-faq',
-    title: 'Bots FAQ',
-    url: 'https://core.telegram.org/bots/faq',
-    kind: 'faq'
-  }
+  { id: 'telegram-faq', title: 'Telegram FAQ', url: 'https://telegram.org/faq', kind: 'faq' },
+  { id: 'bots-faq', title: 'Bots FAQ', url: 'https://core.telegram.org/bots/faq', kind: 'faq' },
+  { id: 'bots-intro', title: 'Bots: An introduction for developers', url: 'https://core.telegram.org/bots', kind: 'guide' },
+  { id: 'bot-features', title: 'Telegram Bot Features', url: 'https://core.telegram.org/bots/features', kind: 'guide' },
+  { id: 'bot-developer-terms', title: 'Telegram Bot Platform Developer Terms', url: 'https://telegram.org/tos/bot-developers', kind: 'terms' },
+  { id: 'bot-terms', title: 'Terms of Service for Bots', url: 'https://telegram.org/tos/bots', kind: 'terms' }
 ];
 
 const USER_AGENT = 'telegram-faq-bot-crawler/1.0 (+https://github.com/abhijeetpatil2122/telegram-faq-bot)';
 const root = path.resolve(process.cwd());
-const output = path.join(root, 'data', 'faq.json');
+const faqOutput = path.join(root, 'data', 'faq.json');
+const knowledgeOutput = path.join(root, 'data', 'knowledge.json');
 
 function decodeHtml(value = '') {
   return value
@@ -59,21 +54,22 @@ function normalize(value = '') {
 }
 
 function slug(value = '') {
-  return normalize(value).replace(/\s+/g, '-').slice(0, 80);
+  return normalize(value).replace(/\s+/g, '-').slice(0, 90);
+}
+
+function headingMatches(html) {
+  return [...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)];
 }
 
 function extractFaq(html, source) {
   const items = [];
-  const headingRegex = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
-  const headings = [...html.matchAll(headingRegex)];
+  const headings = headingMatches(html);
 
   for (let index = 0; index < headings.length; index += 1) {
-    const heading = stripTags(headings[index][2]);
-    const question = heading.replace(/^Q:\s*/i, '').trim();
+    const rawHeading = stripTags(headings[index][2]);
+    if (!/^Q:\s*/i.test(rawHeading)) continue;
 
-    // Telegram's FAQ pages mark questions with Q:. This deliberately avoids
-    // treating ordinary documentation headings as questions.
-    if (!/^Q:\s*/i.test(heading)) continue;
+    const question = rawHeading.replace(/^Q:\s*/i, '').trim();
     if (question.length < 5 || question.length > 500) continue;
 
     const start = headings[index].index + headings[index][0].length;
@@ -83,15 +79,44 @@ function extractFaq(html, source) {
 
     items.push({
       id: `${source.id}-${slug(question)}`,
+      type: 'faq',
       question,
       aliases: [],
       keywords: normalize(question).split(' ').filter((word) => word.length >= 3),
       answer: answer.slice(0, 12000),
-      source: {
-        id: source.id,
-        title: source.title,
-        url: source.url
-      }
+      source: { id: source.id, title: source.title, url: source.url }
+    });
+  }
+
+  return items;
+}
+
+function extractGuideSections(html, source) {
+  const items = [];
+  const headings = headingMatches(html);
+
+  for (let index = 0; index < headings.length; index += 1) {
+    const heading = stripTags(headings[index][2]);
+    if (!heading || /^Q:\s*/i.test(heading)) continue;
+    if (heading.length < 3 || heading.length > 300) continue;
+
+    const level = Number(headings[index][1]);
+    if (level > 4) continue;
+
+    const start = headings[index].index + headings[index][0].length;
+    const end = headings[index + 1]?.index ?? html.length;
+    const text = stripTags(html.slice(start, end));
+
+    // Avoid indexing navigation/empty headings and extremely tiny fragments.
+    if (text.length < 80) continue;
+
+    items.push({
+      id: `${source.id}-${slug(heading)}`,
+      type: source.kind,
+      title: heading,
+      keywords: normalize(`${heading} ${text.slice(0, 1500)}`).split(' ').filter((word) => word.length >= 4).slice(0, 80),
+      content: text.slice(0, 12000),
+      source: { id: source.id, title: source.title, url: source.url }
     });
   }
 
@@ -104,61 +129,67 @@ async function fetchSource(source) {
 
   try {
     const response = await fetch(source.url, {
-      headers: {
-        'user-agent': USER_AGENT,
-        accept: 'text/html,application/xhtml+xml'
-      },
+      headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
       signal: controller.signal
     });
-
-    if (!response.ok) {
-      throw new Error(`${source.url}: HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`${source.url}: HTTP ${response.status}`);
     return response.text();
   } finally {
     clearTimeout(timeout);
   }
 }
 
-const all = [];
+const faqItems = [];
+const knowledgeItems = [];
 
 for (const source of SOURCES) {
   const html = await fetchSource(source);
-  const items = extractFaq(html, source);
+  const items = source.kind === 'faq'
+    ? extractFaq(html, source)
+    : extractGuideSections(html, source);
 
-  // Never allow a parser regression or an outage to silently replace a source
-  // with an empty dataset.
   if (items.length === 0) {
-    throw new Error(`No FAQ entries extracted from ${source.url}`);
+    throw new Error(`No knowledge entries extracted from ${source.url}`);
   }
 
-  console.log(`${source.id}: extracted ${items.length} entries`);
-  all.push(...items);
+  console.log(`${source.id}: extracted ${items.length} ${source.kind} entries`);
+  knowledgeItems.push(...items);
+  if (source.kind === 'faq') faqItems.push(...items);
 }
 
-const unique = [...new Map(all.map((item) => [normalize(item.question), item])).values()]
-  .sort((a, b) => a.question.localeCompare(b.question));
+const dedupe = (items, key) => [...new Map(items.map((item) => [normalize(item[key]), item])).values()]
+  .sort((a, b) => a[key].localeCompare(b[key]));
 
-const data = {
-  schemaVersion: 2,
-  sources: SOURCES,
-  items: unique
+const faq = {
+  schemaVersion: 3,
+  sources: SOURCES.filter((source) => source.kind === 'faq'),
+  items: dedupe(faqItems, 'question')
 };
 
-await fs.mkdir(path.dirname(output), { recursive: true });
-const next = `${JSON.stringify(data, null, 2)}\n`;
+const knowledge = {
+  schemaVersion: 1,
+  policy: 'Answers must be supported by official Telegram sources indexed here.',
+  sources: SOURCES,
+  items: knowledgeItems.sort((a, b) => a.id.localeCompare(b.id))
+};
 
-let previous = null;
-try {
-  previous = await fs.readFile(output, 'utf8');
-} catch (error) {
-  if (error.code !== 'ENOENT') throw error;
+async function writeIfChanged(file, data) {
+  const next = `${JSON.stringify(data, null, 2)}\n`;
+  let previous = null;
+  try {
+    previous = await fs.readFile(file, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  if (previous === next) {
+    console.log(`No changes: ${path.relative(root, file)}`);
+    return;
+  }
+  await fs.writeFile(file, next);
+  console.log(`Updated ${path.relative(root, file)}`);
 }
 
-if (previous === next) {
-  console.log(`No data changes. ${unique.length} entries remain.`);
-} else {
-  await fs.writeFile(output, next);
-  console.log(`Updated ${output} with ${unique.length} entries.`);
-}
+await fs.mkdir(path.dirname(faqOutput), { recursive: true });
+await writeIfChanged(faqOutput, faq);
+await writeIfChanged(knowledgeOutput, knowledge);
+console.log(`Indexed ${faq.items.length} FAQ entries and ${knowledge.items.length} total knowledge entries.`);
