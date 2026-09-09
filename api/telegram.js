@@ -81,17 +81,14 @@ function score(item, query) {
   if (fields.question === normalizedQuery) points += 1000;
   if (fields.title === normalizedQuery) points += 900;
   if (fields.section === normalizedQuery) points += 700;
-
   if (containsWholePhrase(fields.question, normalizedQuery)) points += 420;
   if (containsWholePhrase(fields.title, normalizedQuery)) points += 360;
   if (containsWholePhrase(fields.section, normalizedQuery)) points += 220;
   if (fields.aliases.some((field) => containsWholePhrase(field, normalizedQuery))) points += 300;
   if (fields.keywords.some((field) => containsWholePhrase(field, normalizedQuery))) points += 180;
-
   if (fields.question.startsWith(normalizedQuery)) points += 260;
   else if (fields.title.startsWith(normalizedQuery)) points += 220;
   else if (fields.section.startsWith(normalizedQuery)) points += 140;
-
   if (fields.question.includes(normalizedQuery)) points += 140;
   if (fields.title.includes(normalizedQuery)) points += 120;
   if (fields.section.includes(normalizedQuery)) points += 80;
@@ -110,7 +107,6 @@ function score(item, query) {
   else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
 
   if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
-
   return points;
 }
 
@@ -139,8 +135,17 @@ function safeResultId(prefix, value) {
 }
 
 function safeButtonUrl(value) {
+  let raw = String(value ?? '').trim();
+  if (!raw || /^(?:javascript|data|vbscript):/i.test(raw)) return null;
+
+  // Telegram Rich URL buttons require an actual HTTP(S) URL. Normalize bare
+  // hostnames such as api.telegram.org to https://api.telegram.org.
+  if (/^(?:www\.|api\.|core\.)?telegram\.org(?:[/:]|$)/i.test(raw) || /^[\w.-]+\.[A-Za-z]{2,}(?:[/:?#]|$)/.test(raw)) {
+    raw = `https://${raw}`;
+  }
+
   try {
-    const url = new URL(String(value ?? '').trim());
+    const url = new URL(raw);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
     if (!url.hostname) return null;
     return url.href;
@@ -149,28 +154,54 @@ function safeButtonUrl(value) {
   }
 }
 
+function richUrlButton(label, href, style = 'link') {
+  const url = safeButtonUrl(href);
+  if (!url) return null;
+  const safeLabel = String(label ?? '').replace(/\s+/g, ' ').trim().slice(0, 180) || 'Open link';
+  return `<tg-button type="url" style="${style}" url="${htmlEscape(url)}">${htmlEscape(safeLabel)}</tg-button>`;
+}
+
+function promoteExternalLinks(html) {
+  // The crawler already preserves source <a href> elements. Here we promote
+  // external HTTP(S) links to Rich link-style buttons while preserving
+  // internal anchors (#...) and Telegram tg:// references as real links.
+  return String(html ?? '').replace(/<a\b([^>]*?)\bhref="(https?:\/\/[^"#]+)"([^>]*)>([\s\S]*?)<\/a>/gi, (_match, before, href, after, labelHtml) => {
+    const label = String(labelHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const button = richUrlButton(label, href, 'link');
+    return button ?? _match;
+  });
+}
+
 function renderAnswerHtml(item) {
   const html = String(item.answer_html ?? '').trim();
-  if (html) return html;
-  return `<p>${htmlEscape(item.answer ?? 'No answer text is available for this entry.')}</p>`;
+  if (!html) return `<p>${htmlEscape(item.answer ?? 'No answer text is available for this entry.')}</p>`;
+  return promoteExternalLinks(html);
+}
+
+function sourceFooter(item) {
+  const sourceTitle = item.source?.title ?? 'Official Telegram source';
+  const sourceUrl = safeButtonUrl(item.source?.url);
+  const button = sourceUrl
+    ? `<tg-button type="url" style="link" url="${htmlEscape(sourceUrl)}">🔗 ${htmlEscape(sourceTitle)}</tg-button>`
+    : null;
+
+  return `<footer>Source: ${htmlEscape(sourceTitle)}${button ? ` ${button}` : ''}</footer>`;
+}
+
+function niceDescription(item) {
+  const source = item.source?.title ?? 'Official Telegram source';
+  const section = item.section && item.section !== item.title ? ` • ${item.section}` : '';
+  return `${source}${section} • Official documentation`.slice(0, 255);
 }
 
 function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
-  const sourceUrl = safeButtonUrl(item.source?.url);
-  const sourceTitle = item.source?.title ?? 'Official Telegram source';
-
-  const sourceButton = sourceUrl
-    ? `<tg-button-row align="center"><tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">📖 Open official source</tg-button></tg-button-row>`
-    : '';
-
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
     `<details><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
     '<hr/>',
-    `<footer>Source: ${htmlEscape(sourceTitle)}</footer>`,
-    sourceButton
-  ].filter(Boolean).join('\n');
+    sourceFooter(item)
+  ].join('\n');
 }
 
 function noResultsContent(query) {
@@ -194,7 +225,7 @@ function noResultsHelpArticle(query) {
     type: 'article',
     id: safeResultId('search-help', displayQuery || 'empty'),
     title: 'How to search this bot',
-    description: 'Use a short, specific Telegram question.',
+    description: 'Search official Telegram documentation with a short, specific question.',
     input_message_content: {
       rich_message: {
         html: [
@@ -233,7 +264,7 @@ function inlineResults(query, offset) {
       type: 'article',
       id: safeResultId('faq', item.id ?? item.question ?? item.title),
       title: item.question ?? item.title ?? 'Telegram documentation',
-      description: item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source',
+      description: niceDescription(item),
       thumbnail_url: ARTICLE_THUMBNAIL_URL,
       input_message_content: { rich_message: { html: renderRichAnswer(item) } }
     })),
