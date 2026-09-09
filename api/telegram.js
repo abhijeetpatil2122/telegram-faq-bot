@@ -7,6 +7,8 @@ const MAX_RESULTS = 50;
 const MIN_SCORE = 24;
 const INLINE_CACHE_TIME = 0;
 const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a7b8-45f2-b249-a6bcaa6720c0';
+const HELP_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/510c3a83-8a96-416c-b1ea-a37dddb6638f';
+const NO_RESULTS_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/6132b4a1-1e93-41a7-a76f-fa199577ad90';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
 const SEARCH_STOPWORDS = new Set([
@@ -26,7 +28,6 @@ function loadKnowledge() {
 }
 
 const KNOWLEDGE = loadKnowledge();
-const SOURCE_COUNT = new Set(KNOWLEDGE.map((item) => item.source?.url).filter(Boolean)).size;
 let botProfilePromise;
 
 function normalize(value = '') {
@@ -138,23 +139,23 @@ function safeButtonUrl(value) {
   let raw = String(value ?? '').trim();
   if (!raw || /^(?:javascript|data|vbscript):/i.test(raw)) return null;
 
-  // Telegram Rich URL buttons require an actual HTTP(S) URL. Normalize bare
-  // hostnames such as api.telegram.org to https://api.telegram.org.
-  if (/^(?:www\.|api\.|core\.)?telegram\.org(?:[/:]|$)/i.test(raw) || /^[\w.-]+\.[A-Za-z]{2,}(?:[/:?#]|$)/.test(raw)) {
+  // Normalize browser-openable bare domains/hosts to HTTPS.
+  // Examples: api.telegram.org, core.telegram.org/bots/features#privacy-mode
+  if (/^[\w.-]+\.[A-Za-z]{2,}(?::\d+)?(?:[/?#]|$)/.test(raw)) {
     raw = `https://${raw}`;
   }
 
   try {
     const url = new URL(raw);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-    if (!url.hostname) return null;
+    if (url.protocol !== 'https:' && url.protocol !== 'http:' && url.protocol !== 'tg:') return null;
+    if (!url.hostname && url.protocol !== 'tg:') return null;
     return url.href;
   } catch {
     return null;
   }
 }
 
-function richUrlButton(label, href, style = 'link') {
+function richUrlButton(label, href, style = 'primary') {
   const url = safeButtonUrl(href);
   if (!url) return null;
   const safeLabel = String(label ?? '').replace(/\s+/g, ' ').trim().slice(0, 180) || 'Open link';
@@ -162,13 +163,14 @@ function richUrlButton(label, href, style = 'link') {
 }
 
 function promoteExternalLinks(html) {
-  // The crawler already preserves source <a href> elements. Here we promote
-  // external HTTP(S) links to Rich link-style buttons while preserving
-  // internal anchors (#...) and Telegram tg:// references as real links.
-  return String(html ?? '').replace(/<a\b([^>]*?)\bhref="(https?:\/\/[^"#]+)"([^>]*)>([\s\S]*?)<\/a>/gi, (_match, before, href, after, labelHtml) => {
+  // Promote every browser/TG URL found in source anchors to a Rich URL button.
+  // This intentionally accepts fragments (#...), query strings and bare hosts.
+  // Internal fragment-only links remain normal anchors because they are not
+  // standalone destinations and cannot be opened outside the rendered message.
+  return String(html ?? '').replace(/<a\b([^>]*?)\bhref=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi, (match, before, href, after, labelHtml) => {
     const label = String(labelHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const button = richUrlButton(label, href, 'link');
-    return button ?? _match;
+    const button = richUrlButton(label, href, 'primary');
+    return button ?? match;
   });
 }
 
@@ -182,10 +184,12 @@ function sourceFooter(item) {
   const sourceTitle = item.source?.title ?? 'Official Telegram source';
   const sourceUrl = safeButtonUrl(item.source?.url);
   const button = sourceUrl
-    ? `<tg-button type="url" style="link" url="${htmlEscape(sourceUrl)}">🔗 ${htmlEscape(sourceTitle)}</tg-button>`
+    ? `<tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">${htmlEscape(sourceTitle)}</tg-button>`
     : null;
 
-  return `<footer>Source: ${htmlEscape(sourceTitle)}${button ? ` ${button}` : ''}</footer>`;
+  // Keep only the word "Source:" as normal footer text. The source name itself
+  // is the clickable Rich button, so it is never duplicated as plain text.
+  return `<footer>Source:${button ? ` ${button}` : ` ${htmlEscape(sourceTitle)}`}</footer>`;
 }
 
 function niceDescription(item) {
@@ -226,6 +230,7 @@ function noResultsHelpArticle(query) {
     id: safeResultId('search-help', displayQuery || 'empty'),
     title: 'How to search this bot',
     description: 'Search official Telegram documentation with a short, specific question.',
+    thumbnail_url: HELP_THUMBNAIL_URL,
     input_message_content: {
       rich_message: {
         html: [
@@ -250,6 +255,7 @@ function inlineResults(query, offset) {
           id: safeResultId('no-results', query || 'empty'),
           title: query.trim() ? `No results for “${query.trim().slice(0, 60)}”` : 'No results found',
           description: 'No matching information in the official Telegram sources.',
+          thumbnail_url: NO_RESULTS_THUMBNAIL_URL,
           input_message_content: noResultsContent(query)
         },
         noResultsHelpArticle(query)
@@ -332,90 +338,91 @@ function helpMessageHtml(username) {
   return [
     `<h2>🧭 ${htmlEscape(username)} Help</h2>`,
     '<p>Use inline mode to search the official Telegram knowledge base.</p>',
-    '<table bordered compact><tr><th>Command</th><th>Action</th></tr><tr><td><code>/start</code></td><td>Welcome + search</td></tr><tr><td><code>/help</code></td><td>Show help</td></tr><tr><td><code>/ping</code></td><td>Service + knowledge status</td></tr></table>',
+    '<details><summary>Search tips</summary><ul><li>Use a short, specific question.</li><li>Include important Telegram or Bot API terms.</li><li>If nothing matches, try a different wording.</li></ul></details>',
+    '<p><b>Examples:</b> How do I create a bot? • What is inline mode? • How do webhooks work?</p>',
     '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="center"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
     '<footer>Source: Official Telegram documentation</footer>'
   ].join('\n');
 }
 
-async function pingMessageHtml() {
-  const started = performance.now();
-  const profile = await getBotProfile(true);
-  const latency = Math.max(0, Math.round(performance.now() - started));
-  return [
-    '<h2>🏓 Pong!</h2>',
-    `<p><b>${htmlEscape(botUsername(profile))}</b> is online and responding.</p>`,
-    `<table bordered compact><tr><th>Metric</th><th>Status</th></tr><tr><td>Telegram API</td><td>🟢 ${latency} ms</td></tr><tr><td>Knowledge base</td><td>🟢 ${KNOWLEDGE.length} entries</td></tr><tr><td>Official sources</td><td>🟢 ${SOURCE_COUNT} sources</td></tr></table>`,
-    '<details><summary>About the database</summary><p>This bot does not use a runtime database. Its knowledge base is the generated <code>data/knowledge.json</code> file shipped with the deployment.</p></details>',
-    '<footer>Source: GitHub knowledge base • Vercel</footer>'
-  ].join('\n');
+function pingMessageHtml() {
+  return '<h2>🏓 Pong!</h2><p>The bot is online and ready to search the official Telegram knowledge base.</p><footer>Source: Official Telegram documentation</footer>';
 }
 
-async function sendRichMessage(chatId, html) {
-  return telegram('sendRichMessage', { chat_id: chatId, rich_message: { html } });
+async function handleMessage(update, profile) {
+  const message = update.message;
+  if (!message?.chat?.id) return;
+
+  const command = parseCommand(message.text, profile?.username);
+  if (!command) return;
+
+  const username = botUsername(profile);
+  const html = command === 'start'
+    ? startMessageHtml(username)
+    : command === 'help'
+      ? helpMessageHtml(username)
+      : pingMessageHtml();
+
+  await telegram('sendMessage', {
+    chat_id: message.chat.id,
+    text: html,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true
+  });
 }
 
-function authorizedWebhook(req) {
-  const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
+function validateSecret(req) {
+  const expected = process.env.WEBHOOK_SECRET;
   if (!expected) return true;
   return req.headers['x-telegram-bot-api-secret-token'] === expected;
 }
 
 export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    res.status(200).json({ ok: true, service: 'telegram-faq-bot', knowledge_entries: KNOWLEDGE.length });
-    return;
-  }
   if (req.method !== 'POST') {
-    res.status(405).json({ ok: false, error: 'Method not allowed' });
+    res.status(200).json({ ok: true, service: 'telegram-faq-bot' });
     return;
   }
-  if (!authorizedWebhook(req)) {
+
+  if (!validateSecret(req)) {
     res.status(401).json({ ok: false, error: 'Unauthorized' });
     return;
   }
 
   try {
     const update = req.body ?? {};
+    const profile = await getBotProfile();
 
     if (update.inline_query) {
       const query = String(update.inline_query.query ?? '');
       const offset = String(update.inline_query.offset ?? '');
-      const started = performance.now();
-      try {
-        const page = inlineResults(query, offset);
-        await telegram('answerInlineQuery', {
-          inline_query_id: update.inline_query.id,
-          results: page.results,
-          cache_time: INLINE_CACHE_TIME,
-          is_personal: false,
-          next_offset: page.next_offset
-        });
-        console.info('Inline query answered', {
-          queryLength: query.length,
-          offset,
-          resultCount: page.results.length,
-          nextOffset: page.next_offset,
-          durationMs: Math.round(performance.now() - started)
-        });
-      } catch (error) {
-        if (isExpiredInlineQueryError(error)) {
-          console.info('Inline query expired before Telegram accepted the answer', { queryLength: query.length, offset });
-        } else {
-          throw error;
-        }
-      }
-    } else if (update.message?.text) {
-      const profile = await getBotProfile();
-      const command = parseCommand(update.message.text, profile?.username);
-      if (command === 'start') await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
-      else if (command === 'help') await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
-      else if (command === 'ping') await sendRichMessage(update.message.chat.id, await pingMessageHtml());
+      const result = inlineResults(query, offset);
+      await telegram('answerInlineQuery', {
+        inline_query_id: update.inline_query.id,
+        results: result.results,
+        cache_time: INLINE_CACHE_TIME,
+        is_personal: true,
+        next_offset: result.next_offset
+      });
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (update.message) {
+      await handleMessage(update, profile);
+      res.status(200).json({ ok: true });
+      return;
     }
 
     res.status(200).json({ ok: true });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ ok: false });
+    if (isExpiredInlineQueryError(error)) {
+      console.warn('Ignoring expired inline query:', error.description ?? error.message);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    console.error('Telegram webhook error:', error);
+    res.status(500).json({ ok: false, error: 'Internal server error' });
   }
 }
