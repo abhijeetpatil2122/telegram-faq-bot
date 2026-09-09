@@ -332,7 +332,7 @@ function pingMessageHtml(latencyMs) {
   return [
     '<h2>🏓 Pong!</h2>',
     `<p><b>Response time:</b> ${latencyMs} ms</p>`,
-    '<footer>Telegram webhook response latency</footer>'
+    '<footer>Telegram Bot API round-trip latency</footer>'
   ].join('\n');
 }
 
@@ -344,7 +344,6 @@ async function handleMessage(update, profile) {
   if (!command) return;
 
   const username = botUsername(profile);
-  const startedAt = Date.now();
   let html;
 
   if (command === 'start') {
@@ -352,7 +351,10 @@ async function handleMessage(update, profile) {
   } else if (command === 'help') {
     html = helpMessageHtml(username);
   } else {
-    html = pingMessageHtml(Math.max(0, Date.now() - startedAt));
+    const pingStartedAt = performance.now();
+    await telegram('getMe');
+    const latencyMs = Math.max(1, Math.round(performance.now() - pingStartedAt));
+    html = pingMessageHtml(latencyMs);
   }
 
   await telegram('sendRichMessage', {
@@ -362,57 +364,45 @@ async function handleMessage(update, profile) {
   });
 }
 
-function validateSecret(req) {
-  const expected = process.env.WEBHOOK_SECRET;
-  if (!expected) return true;
-  return req.headers['x-telegram-bot-api-secret-token'] === expected;
-}
-
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.status(200).json({ ok: true, service: 'telegram-faq-bot' });
+export default async function handler(request, response) {
+  if (request.method !== 'POST') {
+    response.status(200).json({ ok: true });
     return;
   }
 
-  if (!validateSecret(req)) {
-    res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (secret && request.headers['x-telegram-bot-api-secret-token'] !== secret) {
+    response.status(401).json({ ok: false });
     return;
   }
 
   try {
-    const update = req.body ?? {};
+    const update = request.body ?? {};
     const profile = await getBotProfile();
 
     if (update.inline_query) {
-      const query = String(update.inline_query.query ?? '');
-      const offset = String(update.inline_query.offset ?? '');
-      const result = inlineResults(query, offset);
-      await telegram('answerInlineQuery', {
-        inline_query_id: update.inline_query.id,
-        results: result.results,
-        cache_time: INLINE_CACHE_TIME,
-        is_personal: true,
-        next_offset: result.next_offset
-      });
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    if (update.message) {
+      const queryId = update.inline_query.id;
+      const query = update.inline_query.query ?? '';
+      const offset = update.inline_query.offset ?? '';
+      try {
+        const page = inlineResults(query, offset);
+        await telegram('answerInlineQuery', {
+          inline_query_id: queryId,
+          results: page.results,
+          cache_time: INLINE_CACHE_TIME,
+          is_personal: true,
+          next_offset: page.next_offset
+        });
+      } catch (error) {
+        if (!isExpiredInlineQueryError(error)) throw error;
+      }
+    } else if (update.message) {
       await handleMessage(update, profile);
-      res.status(200).json({ ok: true });
-      return;
     }
 
-    res.status(200).json({ ok: true });
+    response.status(200).json({ ok: true });
   } catch (error) {
-    if (isExpiredInlineQueryError(error)) {
-      console.warn('Ignoring expired inline query:', error.description ?? error.message);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    console.error('Telegram webhook error:', error);
-    res.status(500).json({ ok: false, error: 'Internal server error' });
+    console.error('Webhook error:', error);
+    response.status(200).json({ ok: false });
   }
 }
