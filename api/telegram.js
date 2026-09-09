@@ -209,35 +209,28 @@ function renderRichAnswer(item) {
 }
 
 function noResultsContent(query) {
-  const displayQuery = String(query ?? '').trim().slice(0, 100);
   return {
     rich_message: {
       html: [
-        `<h2>🔎 No results${displayQuery ? ` for “${htmlEscape(displayQuery)}”` : ''}</h2>`,
-        '<p>No matching answer was found in the official Telegram knowledge base.</p>',
-        '<details><summary>How to search</summary><p>Try a short, specific Telegram or Bot API question such as <i>How do I create a bot?</i> or <i>What is inline mode?</i></p></details>',
-        '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>',
-        '<footer>Source: Official Telegram documentation</footer>'
+        '<footer>No matching answer was found in the official Telegram knowledge base.</footer>',
+        '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>'
       ].join('\n')
     }
   };
 }
 
 function noResultsHelpArticle(query) {
-  const displayQuery = String(query ?? '').trim().slice(0, 100);
   return {
     type: 'article',
-    id: safeResultId('search-help', displayQuery || 'empty'),
+    id: safeResultId('search-help', 'static'),
     title: 'How to search this bot',
-    description: 'Search official Telegram documentation with a short, specific question.',
+    description: 'Search the official Telegram knowledge base.',
     thumbnail_url: HELP_THUMBNAIL_URL,
     input_message_content: {
       rich_message: {
         html: [
-          '<h2>🧭 Search help</h2>',
-          `<p>${displayQuery ? `Nothing matched “${htmlEscape(displayQuery)}”. ` : ''}Try a short, specific question about Telegram, bots, Bot API features or official bot terms.</p>`,
-          '<p><b>Examples:</b> How do I create a bot? • What is inline mode? • How do webhooks work?</p>',
-          '<footer>Source: Official Telegram documentation</footer>'
+          '<footer>Ask a short, specific question about Telegram, bots, Bot API features or official bot terms.</footer>',
+          '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>'
         ].join('\n')
       }
     }
