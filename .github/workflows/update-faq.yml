@@ -1,4 +1,4 @@
-name: Update Telegram FAQ
+name: Update Telegram Knowledge
 
 on:
   schedule:
@@ -20,21 +20,21 @@ jobs:
         with:
           node-version: 20
 
+      - name: Validate webhook
+        run: node --check api/telegram.js
+
       - name: Crawl official Telegram sources
         run: node scripts/crawl-faq.mjs
 
-      - name: Validate JavaScript
-        run: node --check api/telegram.js
-
       - name: Commit changes
         run: |
-          if git diff --quiet -- data/faq.json; then
-            echo 'No FAQ changes.'
+          if git diff --quiet -- data/faq.json data/knowledge.json; then
+            echo 'No knowledge changes.'
             exit 0
           fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/faq.json
-          git commit -m 'chore(data): update Telegram FAQ'
+          git add data/faq.json data/knowledge.json
+          git commit -m 'chore(data): update Telegram knowledge'
           git push
