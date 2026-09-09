@@ -28,6 +28,8 @@ const STOPWORDS = new Set([
   'yours', 'telegram'
 ]);
 
+const SHORT_KEYWORDS = new Set(['api', 'app', 'bot', 'bots', 'faq', 'tpa']);
+
 function normalize(value = '') {
   return String(value)
     .toLowerCase()
@@ -45,6 +47,8 @@ function cleanText(value = '') {
   return String(value)
     .replace(/\u00a0/g, ' ')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/<a\b[^>]*>\s*<\/a>/gi, ' ')
+    .replace(/<a\b[^>]*\/\s*>/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -70,7 +74,7 @@ function cleanAnswer(parts = []) {
 function keywordsFor(title, answer) {
   const words = `${normalize(title)} ${normalize(answer).slice(0, 1800)}`
     .split(' ')
-    .filter((word) => word.length >= 3 && !STOPWORDS.has(word));
+    .filter((word) => (word.length >= 4 || SHORT_KEYWORDS.has(word)) && !STOPWORDS.has(word));
 
   return [...new Set(words)].slice(0, 50);
 }
