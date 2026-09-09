@@ -26,6 +26,9 @@ jobs:
       - name: Crawl official Telegram sources
         run: node scripts/crawl-faq.mjs
 
+      - name: Validate generated knowledge
+        run: node scripts/validate-knowledge.mjs
+
       - name: Commit changes
         run: |
           if git diff --quiet -- data/faq.json data/knowledge.json; then
