@@ -10,10 +10,9 @@ const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
 const SEARCH_STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do', 'does',
-  'for', 'from', 'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or',
-  'please', 'tell', 'that', 'the', 'this', 'to', 'what', 'when', 'where',
-  'which', 'who', 'why', 'with', 'you', 'your'
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do', 'does', 'for', 'from',
+  'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or', 'please', 'tell', 'that', 'the',
+  'this', 'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with', 'you', 'your'
 ]);
 
 function loadKnowledge() {
@@ -31,12 +30,7 @@ const SOURCE_COUNT = new Set(KNOWLEDGE.map((item) => item.source?.url).filter(Bo
 let botProfilePromise;
 
 function normalize(value = '') {
-  return String(value)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return String(value).toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function queryTokens(query) {
@@ -48,9 +42,8 @@ function tokenize(value) {
 }
 
 function searchableText(item) {
-  return [item.question, item.title, ...(item.aliases ?? []), ...(item.keywords ?? [])]
-    .filter(Boolean)
-    .map(normalize);
+  return [item.question, item.title, item.section, ...(item.aliases ?? []), ...(item.keywords ?? [])]
+    .filter(Boolean).map(normalize);
 }
 
 function score(item, query) {
@@ -69,48 +62,36 @@ function score(item, query) {
     else if (field.includes(normalizedQuery)) points += 90;
   }
 
-  const matchedPrimaryTokens = tokens.filter((token) => primaryTokens.has(token)).length;
-  const matchedFieldTokens = tokens.filter((token) => fields.some((field) => tokenize(field).has(token))).length;
-
-  points += matchedPrimaryTokens * 45;
-  points += matchedFieldTokens * 12;
-  if (tokens.length > 1 && matchedPrimaryTokens === tokens.length) points += 90;
-  if (tokens.length > 1 && matchedFieldTokens === tokens.length) points += 45;
-
+  const matchedPrimary = tokens.filter((token) => primaryTokens.has(token)).length;
+  const matchedFields = tokens.filter((token) => fields.some((field) => tokenize(field).has(token))).length;
+  points += matchedPrimary * 45 + matchedFields * 12;
+  if (tokens.length > 1 && matchedPrimary === tokens.length) points += 90;
+  if (tokens.length > 1 && matchedFields === tokens.length) points += 45;
   return points;
 }
 
 function searchKnowledge(query) {
-  const normalizedQuery = normalize(query);
-  if (!normalizedQuery) return KNOWLEDGE.slice();
-
+  if (!normalize(query)) return KNOWLEDGE.slice();
   return KNOWLEDGE
     .map((item) => ({ item, score: score(item, query) }))
     .filter(({ score: itemScore }) => itemScore >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title).localeCompare(b.item.question ?? b.item.title))
+    .sort((a, b) => b.score - a.score || (a.item.title ?? '').localeCompare(b.item.title ?? ''))
     .map(({ item }) => item);
 }
 
 function paginate(items, offset) {
-  const parsedOffset = Number.parseInt(offset || '0', 10);
-  const start = Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0;
+  const parsed = Number.parseInt(offset || '0', 10);
+  const start = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
   const results = items.slice(start, start + MAX_RESULTS);
-  const next = start + results.length < items.length ? String(start + results.length) : '';
-  return { results, next_offset: next };
+  return { results, next_offset: start + results.length < items.length ? String(start + results.length) : '' };
 }
 
 function htmlEscape(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 }
 
 function safeResultId(prefix, value) {
-  const digest = createHash('sha256').update(String(value)).digest('hex').slice(0, 32);
-  return `${prefix}-${digest}`;
+  return `${prefix}-${createHash('sha256').update(String(value)).digest('hex').slice(0, 32)}`;
 }
 
 function sourceTypeLabel(item) {
@@ -119,43 +100,29 @@ function sourceTypeLabel(item) {
   return 'Official Telegram guide';
 }
 
-function expandableAnswer(text) {
-  const normalized = String(text ?? '').replace(/\r\n?/g, '\n').trim();
-  if (!normalized) return '<blockquote expandable>No answer text is available for this entry.</blockquote>';
-
-  const blocks = normalized
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => block.split('\n').map((line) => htmlEscape(line.trim())).join('<br>'));
-
-  return `<blockquote expandable>${blocks.join('<br><br>')}</blockquote>`;
+function renderAnswerHtml(item) {
+  const html = String(item.answer_html ?? '').trim();
+  if (html) return html;
+  return `<p>${htmlEscape(item.answer ?? 'No answer text is available for this entry.')}</p>`;
 }
 
 function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
-  const body = item.answer ?? item.content ?? '';
   const sourceUrl = item.source?.url;
   const sourceTitle = item.source?.title ?? 'Official Telegram source';
   const sourceType = sourceTypeLabel(item);
-
   const sourceButton = sourceUrl
     ? `<tg-button-row align="center"><tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">📖 Official source</tg-button></tg-button-row>`
     : '';
 
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
-    '<p><b>Answer</b></p>',
-    expandableAnswer(body),
+    `<details open><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
     '<hr/>',
-    `<details><summary>About this answer</summary><p><b>Source:</b> ${htmlEscape(sourceTitle)}<br><b>Type:</b> ${htmlEscape(sourceType)}</p></details>`,
+    `<details><summary>About this answer</summary><p><b>Source:</b> ${htmlEscape(sourceTitle)}<br/><b>Type:</b> ${htmlEscape(sourceType)}</p></details>`,
     sourceButton,
     '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
   ].filter(Boolean).join('\n');
-}
-
-function richMessageContent(item) {
-  return { rich_message: { html: renderRichAnswer(item) } };
 }
 
 function noResultsContent(query) {
@@ -195,7 +162,6 @@ function noResultsHelpArticle(query) {
 
 function inlineResults(query, offset) {
   const allMatches = searchKnowledge(query);
-
   if (!allMatches.length) {
     if (offset) return { results: [], next_offset: '' };
     return {
@@ -214,21 +180,16 @@ function inlineResults(query, offset) {
   }
 
   const page = paginate(allMatches, offset);
-
   return {
-    results: page.results.map((item) => {
-      const title = item.question ?? item.title ?? 'Telegram documentation';
-      const description = item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source';
-      return {
-        type: 'article',
-        id: safeResultId('faq', item.id ?? title),
-        title,
-        description,
-        url: item.source?.url,
-        thumbnail_url: ARTICLE_THUMBNAIL_URL,
-        input_message_content: richMessageContent(item)
-      };
-    }),
+    results: page.results.map((item) => ({
+      type: 'article',
+      id: safeResultId('faq', item.id ?? item.title),
+      title: item.question ?? item.title ?? 'Telegram documentation',
+      description: item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source',
+      url: item.source?.url,
+      thumbnail_url: ARTICLE_THUMBNAIL_URL,
+      input_message_content: { rich_message: { html: renderRichAnswer(item) } }
+    })),
     next_offset: page.next_offset
   };
 }
@@ -236,13 +197,11 @@ function inlineResults(query, offset) {
 async function telegram(method, payload) {
   const token = process.env.BOT_TOKEN;
   if (!token) throw new Error('BOT_TOKEN is not configured');
-
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload)
   });
-
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.ok === false) {
     const error = new Error(`Telegram ${method} failed: HTTP ${response.status} ${body?.description ?? ''}`.trim());
@@ -305,11 +264,9 @@ async function pingMessageHtml() {
   const started = performance.now();
   const profile = await getBotProfile(true);
   const latency = Math.max(0, Math.round(performance.now() - started));
-  const username = botUsername(profile);
-
   return [
     '<h2>🏓 Pong!</h2>',
-    `<p><b>${htmlEscape(username)}</b> is online and responding.</p>`,
+    `<p><b>${htmlEscape(botUsername(profile))}</b> is online and responding.</p>`,
     `<table bordered compact><tr><th>Metric</th><th>Status</th></tr><tr><td>Telegram API</td><td>🟢 ${latency} ms</td></tr><tr><td>Knowledge base</td><td>🟢 ${KNOWLEDGE.length} entries</td></tr><tr><td>Official sources</td><td>🟢 ${SOURCE_COUNT} sources</td></tr></table>`,
     '<details><summary>About the database</summary><p>This bot does not use a runtime database. Its knowledge base is the generated <code>data/knowledge.json</code> file shipped with the deployment.</p></details>',
     '<footer>Serverless • GitHub knowledge base • Vercel</footer>'
@@ -328,15 +285,13 @@ function authorizedWebhook(req) {
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    res.status(200).json({ ok: true, service: 'telegram-faq-bot' });
+    res.status(200).json({ ok: true, service: 'telegram-faq-bot', knowledge_entries: KNOWLEDGE.length });
     return;
   }
-
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Method not allowed' });
     return;
   }
-
   if (!authorizedWebhook(req)) {
     res.status(401).json({ ok: false, error: 'Unauthorized' });
     return;
@@ -349,7 +304,6 @@ export default async function handler(req, res) {
       const query = String(update.inline_query.query ?? '');
       const offset = String(update.inline_query.offset ?? '');
       const started = performance.now();
-
       try {
         const page = inlineResults(query, offset);
         await telegram('answerInlineQuery', {
@@ -359,7 +313,6 @@ export default async function handler(req, res) {
           is_personal: false,
           next_offset: page.next_offset
         });
-
         console.info('Inline query answered', {
           queryLength: query.length,
           offset,
@@ -369,30 +322,17 @@ export default async function handler(req, res) {
         });
       } catch (error) {
         if (isExpiredInlineQueryError(error)) {
-          console.info('Inline query expired before Telegram accepted the answer', {
-            queryLength: query.length,
-            offset,
-            durationMs: Math.round(performance.now() - started)
-          });
+          console.info('Inline query expired before Telegram accepted the answer', { queryLength: query.length, offset });
         } else {
           throw error;
         }
       }
     } else if (update.message?.text) {
-      const commandMatch = String(update.message.text).trim().match(/^\/(start|help|ping)(?:@[A-Za-z0-9_]{5,32})?(?:\s+.*)?$/i);
-
-      if (commandMatch) {
-        const profile = await getBotProfile();
-        const command = parseCommand(update.message.text, profile?.username);
-
-        if (command === 'start') {
-          await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
-        } else if (command === 'help') {
-          await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
-        } else if (command === 'ping') {
-          await sendRichMessage(update.message.chat.id, await pingMessageHtml());
-        }
-      }
+      const profile = await getBotProfile();
+      const command = parseCommand(update.message.text, profile?.username);
+      if (command === 'start') await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
+      else if (command === 'help') await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
+      else if (command === 'ping') await sendRichMessage(update.message.chat.id, await pingMessageHtml());
     }
 
     res.status(200).json({ ok: true });
