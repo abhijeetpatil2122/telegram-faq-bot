@@ -1,0 +1,13 @@
+{
+  "name": "telegram-faq-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch api/telegram.js",
+    "check": "node --check api/telegram.js"
+  }
+}
