@@ -1,6 +1,13 @@
 name: Update Telegram Knowledge
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/crawl-faq.mjs'
+      - 'scripts/validate-knowledge.mjs'
+      - '.github/workflows/update-faq.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
