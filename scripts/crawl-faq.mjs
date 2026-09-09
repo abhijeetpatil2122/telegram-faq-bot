@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import * as cheerio from 'cheerio';
 
 const SOURCES = [
   { id: 'telegram-faq', title: 'Telegram FAQ', url: 'https://telegram.org/faq', kind: 'faq-q' },
@@ -10,41 +11,22 @@ const SOURCES = [
   { id: 'bot-terms', title: 'Telegram Bot Terms', url: 'https://telegram.org/tos/bots', kind: 'terms' }
 ];
 
-const USER_AGENT = 'telegram-faq-bot-crawler/1.1 (+https://github.com/abhijeetpatil2122/telegram-faq-bot)';
+const USER_AGENT = 'telegram-faq-bot-crawler/2.0 (+https://github.com/abhijeetpatil2122/telegram-faq-bot)';
 const root = path.resolve(process.cwd());
 const output = path.join(root, 'data', 'knowledge.json');
 
-function decodeHtml(value = '') {
-  return value
-    .replace(/&#(x?[0-9a-f]+);/gi, (_, code) => {
-      const numeric = code.toLowerCase().startsWith('x')
-        ? Number.parseInt(code.slice(1), 16)
-        : Number.parseInt(code, 10);
-      return Number.isFinite(numeric) ? String.fromCodePoint(numeric) : _;
-    })
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'");
-}
-
-function stripTags(value = '') {
-  return decodeHtml(
-    value
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]+>/g, ' ')
-  )
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+const STOPWORDS = new Set([
+  'about', 'after', 'again', 'against', 'also', 'because', 'before', 'being', 'between',
+  'both', 'could', 'does', 'doing', 'during', 'each', 'from', 'have', 'having', 'here',
+  'into', 'just', 'more', 'most', 'other', 'over', 'same', 'some', 'such', 'than',
+  'that', 'their', 'them', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+  'under', 'very', 'what', 'when', 'where', 'which', 'while', 'with', 'would', 'your',
+  'you', 'will', 'were', 'been', 'only', 'should', 'can', 'cannot', 'may', 'might',
+  'must', 'shall', 'doesn', 'isn', 'aren', 'wasn', 'weren', 'won', 'wouldn', 'telegram'
+]);
 
 function normalize(value = '') {
-  return value
+  return String(value)
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -56,115 +38,161 @@ function slug(value = '') {
   return normalize(value).replace(/\s+/g, '-').slice(0, 90);
 }
 
+function cleanText(value = '') {
+  return String(value)
+    .replace(/\u00a0/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanTitle(value = '') {
+  return cleanText(value)
+    .replace(/^Q:\s*/i, '')
+    .replace(/\s+[#§]+\s*$/g, '')
+    .trim();
+}
+
+function cleanAnswer(parts = []) {
+  const lines = [];
+  for (const part of parts) {
+    const text = cleanText(part);
+    if (!text) continue;
+    if (lines.at(-1) === text) continue;
+    lines.push(text);
+  }
+  return lines.join('\n\n').trim();
+}
+
 function keywordsFor(title, answer) {
-  return [...new Set(`${normalize(title)} ${normalize(answer).slice(0, 1200)}`
+  const words = `${normalize(title)} ${normalize(answer).slice(0, 1800)}`
     .split(' ')
-    .filter((word) => word.length >= 4)
-    .slice(0, 50))];
+    .filter((word) => word.length >= 3 && !STOPWORDS.has(word));
+
+  return [...new Set(words)].slice(0, 50);
 }
 
-function extractHeadings(html) {
-  const regex = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
-  return [...html.matchAll(regex)].map((match) => ({
-    level: Number(match[1]),
-    raw: match[0],
-    text: stripTags(match[2]),
-    index: match.index ?? 0
-  }));
-}
+function chooseContentRoot($) {
+  const selectors = [
+    'main',
+    'article',
+    '#dev_page_content',
+    '#dev_page_content_wrap',
+    '.dev_page_content_wrap',
+    '.dev_page_content',
+    'body'
+  ];
 
-function sectionEnd(headings, index, currentLevel, htmlLength) {
-  for (let next = index + 1; next < headings.length; next += 1) {
-    if (headings[next].level <= currentLevel) return headings[next].index;
+  let best = $('body');
+  let bestCount = 0;
+
+  for (const selector of selectors) {
+    $(selector).each((_, element) => {
+      const count = $(element).find('h1,h2,h3,h4,h5,h6').length;
+      if (count > bestCount) {
+        best = $(element);
+        bestCount = count;
+      }
+    });
   }
-  return htmlLength;
+
+  return best;
 }
 
-function nearestSection(headings, index, maxLevel = 3) {
-  for (let previous = index - 1; previous >= 0; previous -= 1) {
-    if (headings[previous].level <= maxLevel && headings[previous].text) return headings[previous].text;
+function loadDocument(html) {
+  const $ = cheerio.load(html, { decodeEntities: true });
+
+  $(
+    'script, style, noscript, template, svg, nav, footer, header, aside, ' +
+    '[role="navigation"], [aria-label*="navigation" i], ' +
+    '[class*="footer" i], [id*="footer" i], [class*="sidebar" i], [id*="sidebar" i], ' +
+    '[class*="dev_page_nav" i], [id*="dev_page_nav" i], ' +
+    '[class*="breadcrumb" i], [id*="breadcrumb" i]'
+  ).remove();
+
+  return { $, root: chooseContentRoot($) };
+}
+
+function sectionBlocks(root, headingIndex, nextHeadingIndex, nodes, $) {
+  return nodes
+    .slice(headingIndex + 1, nextHeadingIndex)
+    .filter((node) => !/^h[1-6]$/i.test(node.name))
+    .map((node) => $(node).text());
+}
+
+function extractSections(html, source, headingFilter) {
+  const { $, root } = loadDocument(html);
+  const nodes = root.find('h1,h2,h3,h4,h5,h6,p,li,pre,blockquote,dt,dd,tr').toArray();
+  const headings = [];
+
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    if (/^h[1-6]$/i.test(node.name)) {
+      const rawText = cleanText($(node).text());
+      headings.push({ index, level: Number(node.name.slice(1)), rawText, text: cleanTitle(rawText) });
+    }
   }
-  return null;
+
+  const items = [];
+
+  for (let headingPosition = 0; headingPosition < headings.length; headingPosition += 1) {
+    const heading = headings[headingPosition];
+    if (!headingFilter(heading)) continue;
+
+    let end = nodes.length;
+    for (let next = headingPosition + 1; next < headings.length; next += 1) {
+      if (headings[next].level <= heading.level) {
+        end = headings[next].index;
+        break;
+      }
+    }
+
+    const answer = cleanAnswer(sectionBlocks(root, heading.index, end, nodes, $));
+    if (answer.length < 20) continue;
+
+    let section = null;
+    for (let previous = headingPosition - 1; previous >= 0; previous -= 1) {
+      if (headings[previous].level < heading.level && headings[previous].text) {
+        section = headings[previous].text;
+        break;
+      }
+    }
+
+    items.push(makeItem(source, heading.text, answer, section));
+  }
+
+  return items;
 }
 
 function makeItem(source, title, answer, section = null) {
-  const cleanTitle = title.trim();
-  const cleanAnswer = answer.trim();
+  const cleanTitleValue = cleanTitle(title);
+  const cleanAnswerValue = cleanAnswer([answer]);
+
   return {
-    id: `${source.id}-${slug(cleanTitle)}`,
+    id: `${source.id}-${slug(cleanTitleValue)}`,
     type: source.kind.startsWith('faq') ? 'faq' : source.kind,
-    title: cleanTitle,
-    question: cleanTitle,
+    title: cleanTitleValue,
+    question: cleanTitleValue,
     section,
     aliases: [],
-    keywords: keywordsFor(cleanTitle, cleanAnswer),
-    answer: cleanAnswer.slice(0, 14000),
+    keywords: keywordsFor(cleanTitleValue, cleanAnswerValue),
+    answer: cleanAnswerValue.slice(0, 14000),
     source: { id: source.id, title: source.title, url: source.url }
   };
 }
 
-function extractFaqWithQ(html, source) {
-  const items = [];
-  const headings = extractHeadings(html);
-
-  for (let index = 0; index < headings.length; index += 1) {
-    const heading = headings[index];
-    if (!/^Q:\s*/i.test(heading.text)) continue;
-
-    const question = heading.text.replace(/^Q:\s*/i, '').trim();
-    if (question.length < 5 || question.length > 500) continue;
-
-    const start = heading.index + heading.raw.length;
-    const end = sectionEnd(headings, index, heading.level, html.length);
-    const answer = stripTags(html.slice(start, end));
-    if (answer.length < 20) continue;
-
-    items.push(makeItem(source, question, answer, nearestSection(headings, index)));
+function extractSource(html, source) {
+  switch (source.kind) {
+    case 'faq-q':
+      return extractSections(html, source, ({ level, rawText }) => level >= 2 && /^Q:\s*/i.test(rawText));
+    case 'faq-h4':
+      return extractSections(html, source, ({ level, text }) => level === 4 && text.length >= 5 && text.length <= 500);
+    case 'guide':
+    case 'terms':
+      return extractSections(html, source, ({ level, text }) => level >= 2 && level <= 3 && text.length >= 5 && text.length <= 500);
+    default:
+      throw new Error(`Unknown source parser: ${source.kind}`);
   }
-
-  return items;
-}
-
-function extractFaqHeadings(html, source) {
-  const items = [];
-  const headings = extractHeadings(html);
-
-  // Bots FAQ currently uses h4 elements for individual questions and h3 for
-  // category headings. Do not depend on the visible wording of questions.
-  for (let index = 0; index < headings.length; index += 1) {
-    const heading = headings[index];
-    if (heading.level !== 4) continue;
-    if (!heading.text || heading.text.length < 5 || heading.text.length > 500) continue;
-
-    const start = heading.index + heading.raw.length;
-    const end = sectionEnd(headings, index, heading.level, html.length);
-    const answer = stripTags(html.slice(start, end));
-    if (answer.length < 20) continue;
-
-    items.push(makeItem(source, heading.text, answer, nearestSection(headings, index, 3)));
-  }
-
-  return items;
-}
-
-function extractGuideSections(html, source) {
-  const items = [];
-  const headings = extractHeadings(html);
-
-  for (let index = 0; index < headings.length; index += 1) {
-    const heading = headings[index];
-    if (heading.level > 3) continue;
-    if (!heading.text || /^Q:\s*/i.test(heading.text)) continue;
-
-    const start = heading.index + heading.raw.length;
-    const end = sectionEnd(headings, index, heading.level, html.length);
-    const text = stripTags(html.slice(start, end));
-    if (text.length < 80) continue;
-
-    items.push(makeItem(source, heading.text, text, nearestSection(headings, index, 2)));
-  }
-
-  return items;
 }
 
 async function fetchSource(source) {
@@ -187,16 +215,6 @@ async function fetchSource(source) {
   }
 }
 
-function extractSource(html, source) {
-  switch (source.kind) {
-    case 'faq-q': return extractFaqWithQ(html, source);
-    case 'faq-h4': return extractFaqHeadings(html, source);
-    case 'guide':
-    case 'terms': return extractGuideSections(html, source);
-    default: throw new Error(`Unknown source parser: ${source.kind}`);
-  }
-}
-
 const all = [];
 const sourceStats = [];
 
@@ -211,8 +229,6 @@ for (const source of SOURCES) {
   all.push(...items);
 }
 
-// Avoid duplicate questions appearing twice in inline search. When the same
-// title exists in multiple official sources, retain the richer answer.
 const byTitle = new Map();
 for (const item of all) {
   const key = normalize(item.title);
@@ -221,6 +237,10 @@ for (const item of all) {
 }
 
 const unique = [...byTitle.values()].sort((a, b) => a.title.localeCompare(b.title));
+
+for (const stat of sourceStats) {
+  stat.entriesIndexed = unique.filter((item) => item.source.id === stat.id).length;
+}
 
 const data = {
   schemaVersion: 1,
