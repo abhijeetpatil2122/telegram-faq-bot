@@ -6,6 +6,9 @@
   "engines": {
     "node": "24.x"
   },
+  "dependencies": {
+    "cheerio": "1.2.0"
+  },
   "scripts": {
     "dev": "node --watch api/telegram.js",
     "check": "node --check api/telegram.js && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs"
