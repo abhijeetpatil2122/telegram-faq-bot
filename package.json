@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "node --watch api/telegram.js",
-    "check": "node --check api/telegram.js"
+    "check": "node --check api/telegram.js && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs"
   }
 }
