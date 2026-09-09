@@ -1,21 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const FAQ_PATH = path.join(process.cwd(), 'data', 'faq.json');
+const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
 const MAX_RESULTS = 10;
 
-function loadFaq() {
+function loadKnowledge() {
   try {
-    const data = JSON.parse(fs.readFileSync(FAQ_PATH, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(KNOWLEDGE_PATH, 'utf8'));
     return Array.isArray(data.items) ? data.items : [];
   } catch (error) {
-    console.error('Unable to load FAQ dataset:', error);
+    console.error('Unable to load knowledge dataset:', error);
     return [];
   }
 }
 
 function normalize(value = '') {
-  return value
+  return String(value)
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -23,46 +23,48 @@ function normalize(value = '') {
     .trim();
 }
 
+function searchableText(item) {
+  return [
+    item.question,
+    item.title,
+    ...(item.aliases ?? []),
+    ...(item.keywords ?? [])
+  ].filter(Boolean).map(normalize);
+}
+
 function score(item, query) {
   const normalizedQuery = normalize(query);
   if (!normalizedQuery) return 0;
 
   const queryTokens = normalizedQuery.split(' ').filter((token) => token.length >= 2);
-  const fields = [item.question, ...(item.aliases ?? []), ...(item.keywords ?? [])]
-    .filter(Boolean)
-    .map(normalize);
-
+  const fields = searchableText(item);
   let points = 0;
 
   for (const field of fields) {
-    if (field === normalizedQuery) points += 150;
-    else if (field.startsWith(normalizedQuery)) points += 90;
-    else if (field.includes(normalizedQuery)) points += 60;
+    if (field === normalizedQuery) points += 180;
+    else if (field.startsWith(normalizedQuery)) points += 100;
+    else if (field.includes(normalizedQuery)) points += 65;
 
     for (const token of queryTokens) {
-      if (field.includes(token)) points += 8;
+      if (field.includes(token)) points += 7;
     }
   }
 
-  // Reward answers whose question contains most of the query terms.
-  const question = normalize(item.question);
-  const matchedTokens = queryTokens.filter((token) => question.includes(token)).length;
-  points += matchedTokens * 12;
+  const primary = normalize(item.question ?? item.title ?? '');
+  const matchedTokens = queryTokens.filter((token) => primary.includes(token)).length;
+  points += matchedTokens * 15;
 
   return points;
 }
 
-function searchFaq(query) {
-  const items = loadFaq();
-
-  if (!normalize(query)) {
-    return items.slice(0, MAX_RESULTS);
-  }
+function searchKnowledge(query) {
+  const items = loadKnowledge();
+  if (!normalize(query)) return items.slice(0, MAX_RESULTS);
 
   return items
     .map((item) => ({ item, score: score(item, query) }))
     .filter(({ score: itemScore }) => itemScore > 0)
-    .sort((a, b) => b.score - a.score || a.item.question.localeCompare(b.item.question))
+    .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title).localeCompare(b.item.question ?? b.item.title))
     .slice(0, MAX_RESULTS)
     .map(({ item }) => item);
 }
@@ -75,43 +77,51 @@ function htmlEscape(value = '') {
     .replaceAll('"', '&quot;');
 }
 
-function renderAnswer(item) {
-  const answer = htmlEscape(item.answer ?? '');
-  const sourceUrl = item.source?.url;
-  const source = sourceUrl
-    ? `\n\n<a href="${htmlEscape(sourceUrl)}">📖 Official Telegram source</a>`
-    : '';
+function sourceLink(item) {
+  const url = item.source?.url;
+  return url ? `\n\n<a href="${htmlEscape(url)}">📖 Official Telegram source</a>` : '';
+}
 
-  return `<b>❓ ${htmlEscape(item.question)}</b>\n\n${answer}${source}`;
+function renderAnswer(item) {
+  const title = item.question ?? item.title ?? 'Telegram documentation';
+  const body = item.answer ?? item.content ?? '';
+  const type = item.type === 'faq' ? 'FAQ' : item.type === 'terms' ? 'Official terms' : 'Official guide';
+
+  return `<b>❓ ${htmlEscape(title)}</b>\n\n${htmlEscape(body)}\n\n<i>Source type: ${htmlEscape(type)}</i>${sourceLink(item)}`;
 }
 
 function inlineResults(query) {
-  const matches = searchFaq(query);
+  const matches = searchKnowledge(query);
 
   if (!matches.length) {
     return [{
       type: 'article',
       id: 'no-results',
       title: 'No official answer found',
-      description: 'No matching entry exists in the official Telegram FAQ dataset.',
+      description: 'No matching information exists in the indexed Telegram sources.',
       input_message_content: {
-        message_text: '<b>Nothing found</b>\n\nThis bot only answers questions supported by its official Telegram sources.',
+        message_text: '<b>Nothing found</b>\n\nThis bot only answers questions supported by its official Telegram documentation and terms.',
         parse_mode: 'HTML'
       }
     }];
   }
 
-  return matches.map((item, index) => ({
-    type: 'article',
-    id: item.id ?? `faq-${index}`,
-    title: item.question,
-    description: item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source',
-    input_message_content: {
-      message_text: renderAnswer(item),
-      parse_mode: 'HTML',
-      disable_web_page_preview: true
-    }
-  }));
+  return matches.map((item, index) => {
+    const title = item.question ?? item.title ?? 'Telegram documentation';
+    const description = item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source';
+
+    return {
+      type: 'article',
+      id: item.id ?? `knowledge-${index}`,
+      title,
+      description,
+      input_message_content: {
+        message_text: renderAnswer(item),
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      }
+    };
+  });
 }
 
 async function telegram(method, payload) {
@@ -167,7 +177,7 @@ export default async function handler(req, res) {
     } else if (update.message?.text === '/start' || update.message?.text === '/help') {
       await telegram('sendMessage', {
         chat_id: update.message.chat.id,
-        text: 'Use this bot in inline mode to search official Telegram FAQ answers.\n\nType @your_bot_name followed by a question.',
+        text: 'Use this bot in inline mode to search official Telegram FAQ, bot guides and bot-related terms.\n\nType @your_bot_name followed by a question.',
         disable_web_page_preview: true
       });
     }
