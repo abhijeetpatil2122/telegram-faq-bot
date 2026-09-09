@@ -4,6 +4,7 @@ import path from 'node:path';
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
 const MAX_RESULTS = 10;
 const MIN_SCORE = 24;
+const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
 const SEARCH_STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do', 'does',
@@ -23,6 +24,11 @@ function loadKnowledge() {
 }
 
 const KNOWLEDGE = loadKnowledge();
+const SOURCE_COUNT = new Set(
+  KNOWLEDGE.map((item) => item.source?.url).filter(Boolean)
+).size;
+
+let botProfilePromise;
 
 function normalize(value = '') {
   return String(value)
@@ -96,7 +102,43 @@ function htmlEscape(value = '') {
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function trimUrlPunctuation(value) {
+  return value.replace(/[.,;:!?]+$/g, '').replace(/\)+$/g, (suffix) => {
+    const open = (value.match(/\(/g) ?? []).length;
+    const close = (value.match(/\)/g) ?? []).length;
+    return close > open ? ')'.repeat(close - open) : '';
+  });
+}
+
+function richInlineText(value = '') {
+  const escaped = htmlEscape(value);
+  const tokenPattern = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_]{5,32})/g;
+  let result = '';
+  let cursor = 0;
+
+  for (const match of escaped.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    result += escaped.slice(cursor, index);
+
+    if (token.startsWith('@')) {
+      const username = token.slice(1);
+      result += `<tg-button type="url" style="success" url="https://t.me/${username}">🤖 ${token}</tg-button>`;
+      cursor = index + token.length;
+      continue;
+    }
+
+    const url = trimUrlPunctuation(token);
+    const trailing = token.slice(url.length);
+    result += `<tg-button type="url" style="primary" url="${url}">🔗 Open link</tg-button>${trailing}`;
+    cursor = index + token.length;
+  }
+
+  return result + escaped.slice(cursor);
 }
 
 function richTextBlocks(text) {
@@ -113,16 +155,29 @@ function richTextBlocks(text) {
       const isOrderedList = lines.length > 0 && lines.every((line) => /^\d+[.)]\s+/.test(line));
 
       if (isUnorderedList) {
-        return `<ul>${lines.map((line) => `<li>${htmlEscape(line.replace(/^[-•*]\s+/, ''))}</li>`).join('')}</ul>`;
+        return `<ul>${lines.map((line) => `<li>${richInlineText(line.replace(/^[-•*]\s+/, ''))}</li>`).join('')}</ul>`;
       }
 
       if (isOrderedList) {
-        return `<ol>${lines.map((line) => `<li>${htmlEscape(line.replace(/^\d+[.)]\s+/, ''))}</li>`).join('')}</ol>`;
+        return `<ol>${lines.map((line) => `<li>${richInlineText(line.replace(/^\d+[.)]\s+/, ''))}</li>`).join('')}</ol>`;
       }
 
-      return `<p>${lines.map(htmlEscape).join('<br>')}</p>`;
+      return `<p>${lines.map(richInlineText).join('<br>')}</p>`;
     })
     .join('\n');
+}
+
+function expandableAnswer(text) {
+  const normalized = String(text ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!normalized) return '<blockquote expandable>No answer text is available for this entry.</blockquote>';
+
+  const blocks = normalized
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => block.split('\n').map((line) => richInlineText(line.trim())).join('<br>'));
+
+  return `<blockquote expandable>${blocks.join('<br><br>')}</blockquote>`;
 }
 
 function sourceTypeLabel(item) {
@@ -145,8 +200,8 @@ function renderRichAnswer(item) {
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
     '<p><b>Answer</b></p>',
-    richTextBlocks(body),
-    '<hr>',
+    expandableAnswer(body),
+    '<hr/>',
     `<details><summary>About this answer</summary><p><b>Source:</b> ${htmlEscape(sourceTitle)}<br><b>Type:</b> ${htmlEscape(sourceType)}</p></details>`,
     sourceButton,
     '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
@@ -165,9 +220,10 @@ function noResultsContent() {
   return {
     rich_message: {
       html: [
-        '<h2>Nothing found</h2>',
+        '<h2>🔎 Nothing found</h2>',
         '<p>This bot only answers questions supported by the official Telegram sources in its knowledge base.</p>',
         '<details><summary>What is covered?</summary><ul><li>Telegram FAQ</li><li>Bot FAQ and developer guides</li><li>Bot features</li><li>Official bot terms</li></ul></details>',
+        '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>',
         '<footer>Try a more specific Telegram or bot-related question.</footer>'
       ].join('\n')
     }
@@ -220,6 +276,73 @@ async function telegram(method, payload) {
   return body;
 }
 
+async function getBotProfile() {
+  if (!botProfilePromise) {
+    botProfilePromise = telegram('getMe').then((response) => response.result).catch((error) => {
+      botProfilePromise = null;
+      throw error;
+    });
+  }
+
+  return botProfilePromise;
+}
+
+function botUsername(profile) {
+  return profile?.username ? `@${profile.username}` : `@${DEFAULT_BOT_USERNAME}`;
+}
+
+function parseCommand(text, username) {
+  const match = String(text ?? '').trim().match(/^\/(start|help|ping)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
+  if (!match) return null;
+
+  if (match[2] && username && match[2].toLowerCase() !== username.toLowerCase()) return null;
+  return match[1].toLowerCase();
+}
+
+function startMessageHtml(username) {
+  return [
+    `<h1>🤖 ${htmlEscape(username)}</h1>`,
+    '<p><b>Official Telegram knowledge search</b></p>',
+    '<p>Ask questions about Telegram, bots, Bot API features and official bot terms. Answers come only from the official Telegram sources indexed by this bot.</p>',
+    '<details><summary>How to use</summary><ol><li>Tap <b>Search Telegram</b>.</li><li>Type your Telegram-related question after the bot username.</li><li>Choose the most relevant official answer.</li></ol></details>',
+    '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="center"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
+    '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
+  ].join('\n');
+}
+
+function helpMessageHtml(username) {
+  return [
+    `<h2>🧭 ${htmlEscape(username)} Help</h2>`,
+    '<p>Use inline mode to search the official Telegram knowledge base.</p>',
+    '<table bordered compact><tr><th>Command</th><th>Action</th></tr><tr><td><code>/start</code></td><td>Welcome and quick search</td></tr><tr><td><code>/help</code></td><td>Show this help</td></tr><tr><td><code>/ping</code></td><td>Service and knowledge-base status</td></tr></table>',
+    '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<footer>Answers are limited to indexed official Telegram documentation.</footer>'
+  ].join('\n');
+}
+
+async function pingMessageHtml() {
+  const started = performance.now();
+  const profile = await getBotProfile();
+  const latency = Math.max(0, Math.round(performance.now() - started));
+  const username = botUsername(profile);
+
+  return [
+    '<h2>🏓 Pong!</h2>',
+    `<p><b>${htmlEscape(username)}</b> is online and responding.</p>`,
+    `<table bordered compact><tr><th>Metric</th><th>Status</th></tr><tr><td>Telegram API</td><td>🟢 ${latency} ms</td></tr><tr><td>Knowledge base</td><td>🟢 ${KNOWLEDGE.length} entries</td></tr><tr><td>Official sources</td><td>🟢 ${SOURCE_COUNT} sources</td></tr></table>`,
+    '<details><summary>About the database</summary><p>This bot does not use a runtime database. Its knowledge base is the generated <code>data/knowledge.json</code> file shipped with the deployment.</p></details>',
+    '<footer>Serverless • GitHub knowledge base • Vercel</footer>'
+  ].join('\n');
+}
+
+async function sendRichMessage(chatId, html) {
+  return telegram('sendRichMessage', {
+    chat_id: chatId,
+    rich_message: { html }
+  });
+}
+
 function authorizedWebhook(req) {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expected) return true;
@@ -252,12 +375,17 @@ export default async function handler(req, res) {
         cache_time: 300,
         is_personal: false
       });
-    } else if (update.message?.text === '/start' || update.message?.text === '/help') {
-      await telegram('sendMessage', {
-        chat_id: update.message.chat.id,
-        text: 'Use this bot in inline mode to search official Telegram FAQ, bot guides and bot-related terms.\n\nType @your_bot_name followed by a question.',
-        disable_web_page_preview: true
-      });
+    } else if (update.message?.text) {
+      const profile = await getBotProfile();
+      const command = parseCommand(update.message.text, profile?.username);
+
+      if (command === 'start') {
+        await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
+      } else if (command === 'help') {
+        await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
+      } else if (command === 'ping') {
+        await sendRichMessage(update.message.chat.id, await pingMessageHtml());
+      }
     }
 
     res.status(200).json({ ok: true });
