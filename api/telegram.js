@@ -107,11 +107,16 @@ function htmlEscape(value = '') {
 }
 
 function trimUrlPunctuation(value) {
-  return value.replace(/[.,;:!?]+$/g, '').replace(/\)+$/g, (suffix) => {
-    const open = (value.match(/\(/g) ?? []).length;
-    const close = (value.match(/\)/g) ?? []).length;
-    return close > open ? ')'.repeat(close - open) : '';
-  });
+  let url = value.replace(/[.,;:!?]+$/g, '');
+
+  while (url.endsWith(')')) {
+    const open = (url.match(/\(/g) ?? []).length;
+    const close = (url.match(/\)/g) ?? []).length;
+    if (close <= open) break;
+    url = url.slice(0, -1);
+  }
+
+  return url;
 }
 
 function richInlineText(value = '') {
@@ -139,32 +144,6 @@ function richInlineText(value = '') {
   }
 
   return result + escaped.slice(cursor);
-}
-
-function richTextBlocks(text) {
-  const normalized = String(text ?? '').replace(/\r\n?/g, '\n').trim();
-  if (!normalized) return '<p>No answer text is available for this entry.</p>';
-
-  return normalized
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => {
-      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
-      const isUnorderedList = lines.length > 0 && lines.every((line) => /^[-•*]\s+/.test(line));
-      const isOrderedList = lines.length > 0 && lines.every((line) => /^\d+[.)]\s+/.test(line));
-
-      if (isUnorderedList) {
-        return `<ul>${lines.map((line) => `<li>${richInlineText(line.replace(/^[-•*]\s+/, ''))}</li>`).join('')}</ul>`;
-      }
-
-      if (isOrderedList) {
-        return `<ol>${lines.map((line) => `<li>${richInlineText(line.replace(/^\d+[.)]\s+/, ''))}</li>`).join('')}</ol>`;
-      }
-
-      return `<p>${lines.map(richInlineText).join('<br>')}</p>`;
-    })
-    .join('\n');
 }
 
 function expandableAnswer(text) {
@@ -276,7 +255,9 @@ async function telegram(method, payload) {
   return body;
 }
 
-async function getBotProfile() {
+async function getBotProfile(forceRefresh = false) {
+  if (forceRefresh) botProfilePromise = null;
+
   if (!botProfilePromise) {
     botProfilePromise = telegram('getMe').then((response) => response.result).catch((error) => {
       botProfilePromise = null;
@@ -323,7 +304,7 @@ function helpMessageHtml(username) {
 
 async function pingMessageHtml() {
   const started = performance.now();
-  const profile = await getBotProfile();
+  const profile = await getBotProfile(true);
   const latency = Math.max(0, Math.round(performance.now() - started));
   const username = botUsername(profile);
 
@@ -376,15 +357,19 @@ export default async function handler(req, res) {
         is_personal: false
       });
     } else if (update.message?.text) {
-      const profile = await getBotProfile();
-      const command = parseCommand(update.message.text, profile?.username);
+      const commandMatch = String(update.message.text).trim().match(/^\/(start|help|ping)(?:@[A-Za-z0-9_]{5,32})?(?:\s+.*)?$/i);
 
-      if (command === 'start') {
-        await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
-      } else if (command === 'help') {
-        await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
-      } else if (command === 'ping') {
-        await sendRichMessage(update.message.chat.id, await pingMessageHtml());
+      if (commandMatch) {
+        const profile = await getBotProfile();
+        const command = parseCommand(update.message.text, profile?.username);
+
+        if (command === 'start') {
+          await sendRichMessage(update.message.chat.id, startMessageHtml(botUsername(profile)));
+        } else if (command === 'help') {
+          await sendRichMessage(update.message.chat.id, helpMessageHtml(botUsername(profile)));
+        } else if (command === 'ping') {
+          await sendRichMessage(update.message.chat.id, await pingMessageHtml());
+        }
       }
     }
 
