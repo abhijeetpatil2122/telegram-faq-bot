@@ -138,13 +138,7 @@ function safeResultId(prefix, value) {
 function safeButtonUrl(value) {
   let raw = String(value ?? '').trim();
   if (!raw || /^(?:javascript|data|vbscript):/i.test(raw)) return null;
-
-  // Normalize browser-openable bare domains/hosts to HTTPS.
-  // Examples: api.telegram.org, core.telegram.org/bots/features#privacy-mode
-  if (/^[\w.-]+\.[A-Za-z]{2,}(?::\d+)?(?:[/?#]|$)/.test(raw)) {
-    raw = `https://${raw}`;
-  }
-
+  if (/^[\w.-]+\.[A-Za-z]{2,}(?::\d+)?(?:[/?#]|$)/.test(raw)) raw = `https://${raw}`;
   try {
     const url = new URL(raw);
     if (url.protocol !== 'https:' && url.protocol !== 'http:' && url.protocol !== 'tg:') return null;
@@ -163,10 +157,6 @@ function richUrlButton(label, href, style = 'primary') {
 }
 
 function promoteExternalLinks(html) {
-  // Promote every browser/TG URL found in source anchors to a Rich URL button.
-  // This intentionally accepts fragments (#...), query strings and bare hosts.
-  // Internal fragment-only links remain normal anchors because they are not
-  // standalone destinations and cannot be opened outside the rendered message.
   return String(html ?? '').replace(/<a\b([^>]*?)\bhref=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi, (match, before, href, after, labelHtml) => {
     const label = String(labelHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const button = richUrlButton(label, href, 'primary');
@@ -186,9 +176,6 @@ function sourceFooter(item) {
   const button = sourceUrl
     ? `<tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">${htmlEscape(sourceTitle)}</tg-button>`
     : null;
-
-  // Keep only the word "Source:" as normal footer text. The source name itself
-  // is the clickable Rich button, so it is never duplicated as plain text.
   return `<footer>Source:${button ? ` ${button}` : ` ${htmlEscape(sourceTitle)}`}</footer>`;
 }
 
@@ -316,31 +303,37 @@ function parseCommand(text, username) {
 }
 
 function startMessageHtml(username) {
+  const cleanUsername = username.replace(/^@/, '');
   return [
-    `<b>👋 Welcome to ${htmlEscape(username)}</b>`,
-    'Ask me a Telegram, Bot API or official bot-terms question.',
-    'I search the official Telegram knowledge base and return matching documentation.',
-    '',
-    'Use inline mode: type <code>@' + htmlEscape(username.replace(/^@/, '')) + ' your question</code>'
+    '<h1>👋 Welcome!</h1>',
+    `<p><b>${htmlEscape(username)}</b> is an official Telegram knowledge search bot.</p>`,
+    '<p>Search questions about Telegram, bots, Bot API features and official bot terms. Answers come only from the official Telegram sources indexed by this bot.</p>',
+    '<details><summary>How to search</summary><ol><li>Tap <b>Search Telegram</b>.</li><li>Type a short, specific question.</li><li>Select the most relevant official answer.</li></ol></details>',
+    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
+    `<footer>Inline usage: <code>@${htmlEscape(cleanUsername)} your question</code></footer>`
   ].join('\n');
 }
 
 function helpMessageHtml(username) {
+  const cleanUsername = username.replace(/^@/, '');
   return [
-    '<b>ℹ️ Help</b>',
-    'Ask a short, specific question about Telegram, bots, Bot API features or official bot terms.',
-    '',
-    'Examples:',
-    '• <code>How do I create a bot?</code>',
-    '• <code>What is inline mode?</code>',
-    '• <code>How do webhooks work?</code>',
-    '',
-    'Use inline mode: type <code>@' + htmlEscape(username.replace(/^@/, '')) + ' your question</code>'
+    '<h2>🛠 Help & Commands</h2>',
+    '<p>Use these commands or search the official Telegram knowledge base in inline mode.</p>',
+    '<details open><summary>Commands</summary><ul><li><code>/start</code> — Open the welcome screen.</li><li><code>/help</code> — Show this help menu.</li><li><code>/ping</code> — Check bot response time.</li></ul></details>',
+    '<details><summary>Inline search</summary><p>Type <code>@' + htmlEscape(cleanUsername) + ' your question</code> in any chat.</p><p>Examples:</p><ul><li><code>How do I create a bot?</code></li><li><code>What is inline mode?</code></li><li><code>How do webhooks work?</code></li></ul></details>',
+    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
+    '<footer>Answers are based on official Telegram documentation.</footer>'
   ].join('\n');
 }
 
-function pingMessageHtml() {
-  return '<b>🏓 Pong!</b> Bot is online.';
+function pingMessageHtml(latencyMs) {
+  return [
+    '<h2>🏓 Pong!</h2>',
+    `<p><b>Response time:</b> ${latencyMs} ms</p>`,
+    '<footer>Telegram webhook response latency</footer>'
+  ].join('\n');
 }
 
 async function handleMessage(update, profile) {
@@ -351,17 +344,21 @@ async function handleMessage(update, profile) {
   if (!command) return;
 
   const username = botUsername(profile);
-  const html = command === 'start'
-    ? startMessageHtml(username)
-    : command === 'help'
-      ? helpMessageHtml(username)
-      : pingMessageHtml();
+  const startedAt = Date.now();
+  let html;
 
-  await telegram('sendMessage', {
+  if (command === 'start') {
+    html = startMessageHtml(username);
+  } else if (command === 'help') {
+    html = helpMessageHtml(username);
+  } else {
+    html = pingMessageHtml(Math.max(0, Date.now() - startedAt));
+  }
+
+  await telegram('sendRichMessage', {
     chat_id: message.chat.id,
-    text: html,
-    parse_mode: 'HTML',
-    disable_web_page_preview: true
+    rich_message: { html },
+    disable_notification: false
   });
 }
 
