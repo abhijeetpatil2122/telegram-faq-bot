@@ -2,8 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
-const MAX_RESULTS = 10;
+const MAX_RESULTS = 50;
 const MIN_SCORE = 24;
+const INLINE_CACHE_TIME = 30;
+const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a7b8-45f2-b249-a6bcaa6720c0';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
 const SEARCH_STOPWORDS = new Set([
@@ -87,14 +89,24 @@ function score(item, query) {
 }
 
 function searchKnowledge(query) {
-  if (!normalize(query)) return KNOWLEDGE.slice(0, MAX_RESULTS);
+  const normalizedQuery = normalize(query);
+
+  if (!normalizedQuery) return KNOWLEDGE.slice();
 
   return KNOWLEDGE
     .map((item) => ({ item, score: score(item, query) }))
     .filter(({ score: itemScore }) => itemScore >= MIN_SCORE)
     .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title).localeCompare(b.item.question ?? b.item.title))
-    .slice(0, MAX_RESULTS)
     .map(({ item }) => item);
+}
+
+function paginate(items, offset) {
+  const parsedOffset = Number.parseInt(offset || '0', 10);
+  const start = Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0;
+  const results = items.slice(start, start + MAX_RESULTS);
+  const next = start + results.length < items.length ? String(start + results.length) : '';
+
+  return { results, next_offset: next };
 }
 
 function htmlEscape(value = '') {
@@ -195,46 +207,83 @@ function richMessageContent(item) {
   };
 }
 
-function noResultsContent() {
+function noResultsContent(query) {
+  const displayQuery = String(query ?? '').trim().slice(0, 100);
+
   return {
     rich_message: {
       html: [
-        '<h2>🔎 Nothing found</h2>',
-        '<p>This bot only answers questions supported by the official Telegram sources in its knowledge base.</p>',
-        '<details><summary>What is covered?</summary><ul><li>Telegram FAQ</li><li>Bot FAQ and developer guides</li><li>Bot features</li><li>Official bot terms</li></ul></details>',
+        `<h2>🔎 No results${displayQuery ? ` for “${htmlEscape(displayQuery)}”` : ''}</h2>`,
+        '<p>No matching answer was found in the official Telegram knowledge base.</p>',
+        '<details><summary>How to search</summary><p>Try a short, specific Telegram or Bot API question such as <i>How do I create a bot?</i> or <i>What is inline mode?</i></p></details>',
         '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search again</tg-button></tg-button-row>',
-        '<footer>Try a more specific Telegram or bot-related question.</footer>'
+        '<footer>Official Telegram documentation only.</footer>'
       ].join('\n')
     }
   };
 }
 
-function inlineResults(query) {
-  const matches = searchKnowledge(query);
+function noResultsHelpArticle(query) {
+  const displayQuery = String(query ?? '').trim().slice(0, 100);
 
-  if (!matches.length) {
-    return [{
-      type: 'article',
-      id: 'no-results',
-      title: 'No official answer found',
-      description: 'No matching information exists in the indexed Telegram sources.',
-      input_message_content: noResultsContent()
-    }];
-  }
+  return {
+    type: 'article',
+    id: `search-help-${normalize(displayQuery).slice(0, 40) || 'empty'}`,
+    title: 'How to search this bot',
+    description: 'Use a short, specific Telegram question.',
+    input_message_content: {
+      rich_message: {
+        html: [
+          '<h2>🧭 Search help</h2>',
+          `<p>${displayQuery ? `Nothing matched “${htmlEscape(displayQuery)}”. ` : ''}Try a short, specific question about Telegram, bots, Bot API features or official bot terms.</p>`,
+          '<p><b>Examples:</b> How do I create a bot? • What is inline mode? • How do webhooks work?</p>',
+          '<footer>Official Telegram documentation only.</footer>'
+        ].join('\n')
+      }
+    }
+  };
+}
 
-  return matches.map((item, index) => {
-    const title = item.question ?? item.title ?? 'Telegram documentation';
-    const description = item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source';
+function inlineResults(query, offset) {
+  const allMatches = searchKnowledge(query);
+
+  if (!allMatches.length) {
+    if (offset) return { results: [], next_offset: '' };
 
     return {
-      type: 'article',
-      id: item.id ?? `knowledge-${index}`,
-      title,
-      description,
-      url: item.source?.url,
-      input_message_content: richMessageContent(item)
+      results: [
+        {
+          type: 'article',
+          id: `no-results-${normalize(query).slice(0, 50) || 'empty'}`,
+          title: query.trim() ? `No results for “${query.trim().slice(0, 60)}”` : 'No results found',
+          description: 'No matching information in the official Telegram sources.',
+          input_message_content: noResultsContent(query)
+        },
+        noResultsHelpArticle(query)
+      ],
+      next_offset: ''
     };
-  });
+  }
+
+  const page = paginate(allMatches, offset);
+
+  return {
+    results: page.results.map((item, index) => {
+      const title = item.question ?? item.title ?? 'Telegram documentation';
+      const description = item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source';
+
+      return {
+        type: 'article',
+        id: item.id ?? `knowledge-${index}`,
+        title,
+        description,
+        url: item.source?.url,
+        thumbnail_url: ARTICLE_THUMBNAIL_URL,
+        input_message_content: richMessageContent(item)
+      };
+    }),
+    next_offset: page.next_offset
+  };
 }
 
 async function telegram(method, payload) {
@@ -249,10 +298,17 @@ async function telegram(method, payload) {
 
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.ok === false) {
-    throw new Error(`Telegram ${method} failed: HTTP ${response.status} ${body?.description ?? ''}`.trim());
+    const error = new Error(`Telegram ${method} failed: HTTP ${response.status} ${body?.description ?? ''}`.trim());
+    error.status = response.status;
+    error.description = body?.description ?? '';
+    throw error;
   }
 
   return body;
+}
+
+function isExpiredInlineQueryError(error) {
+  return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');
 }
 
 async function getBotProfile(forceRefresh = false) {
@@ -296,7 +352,7 @@ function helpMessageHtml(username) {
   return [
     `<h2>🧭 ${htmlEscape(username)} Help</h2>`,
     '<p>Use inline mode to search the official Telegram knowledge base.</p>',
-    '<table bordered compact><tr><th>Command</th><th>Action</th></tr><tr><td><code>/start</code></td><td>Welcome and quick search</td></tr><tr><td><code>/help</code></td><td>Show this help</td></tr><tr><td><code>/ping</code></td><td>Service and knowledge-base status</td></tr></table>',
+    '<table bordered compact><tr><th>Command</th><th>Action</th></tr><tr><td><code>/start</code></td><td>Welcome + search</td></tr><tr><td><code>/help</code></td><td>Show help</td></tr><tr><td><code>/ping</code></td><td>Service + knowledge status</td></tr></table>',
     '<tg-button-row align="center"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
     '<footer>Answers are limited to indexed official Telegram documentation.</footer>'
   ].join('\n');
@@ -350,12 +406,38 @@ export default async function handler(req, res) {
     const update = req.body ?? {};
 
     if (update.inline_query) {
-      await telegram('answerInlineQuery', {
-        inline_query_id: update.inline_query.id,
-        results: inlineResults(update.inline_query.query ?? ''),
-        cache_time: 300,
-        is_personal: false
-      });
+      const query = update.inline_query.query ?? '';
+      const offset = update.inline_query.offset ?? '';
+      const started = performance.now();
+
+      try {
+        const page = inlineResults(query, offset);
+        await telegram('answerInlineQuery', {
+          inline_query_id: update.inline_query.id,
+          results: page.results,
+          cache_time: INLINE_CACHE_TIME,
+          is_personal: false,
+          next_offset: page.next_offset
+        });
+
+        console.info('Inline query answered', {
+          queryLength: query.length,
+          offset,
+          resultCount: page.results.length,
+          nextOffset: page.next_offset,
+          durationMs: Math.round(performance.now() - started)
+        });
+      } catch (error) {
+        if (isExpiredInlineQueryError(error)) {
+          console.info('Inline query expired before Telegram accepted the answer', {
+            queryLength: query.length,
+            offset,
+            durationMs: Math.round(performance.now() - started)
+          });
+        } else {
+          throw error;
+        }
+      }
     } else if (update.message?.text) {
       const commandMatch = String(update.message.text).trim().match(/^\/(start|help|ping)(?:@[A-Za-z0-9_]{5,32})?(?:\s+.*)?$/i);
 
