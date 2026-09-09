@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Validate webhook
         run: node --check api/telegram.js
@@ -31,13 +31,13 @@ jobs:
 
       - name: Commit changes
         run: |
-          if git diff --quiet -- data/faq.json data/knowledge.json; then
+          if git diff --quiet -- data/knowledge.json; then
             echo 'No knowledge changes.'
             exit 0
           fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/faq.json data/knowledge.json
+          git add data/knowledge.json
           git commit -m 'chore(data): update Telegram knowledge'
           git push
