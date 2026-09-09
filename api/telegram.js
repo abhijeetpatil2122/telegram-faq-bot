@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
 const MAX_RESULTS = 50;
 const MIN_SCORE = 24;
-const INLINE_CACHE_TIME = 30;
+const INLINE_CACHE_TIME = 0;
 const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a7b8-45f2-b249-a6bcaa6720c0';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
@@ -26,10 +27,7 @@ function loadKnowledge() {
 }
 
 const KNOWLEDGE = loadKnowledge();
-const SOURCE_COUNT = new Set(
-  KNOWLEDGE.map((item) => item.source?.url).filter(Boolean)
-).size;
-
+const SOURCE_COUNT = new Set(KNOWLEDGE.map((item) => item.source?.url).filter(Boolean)).size;
 let botProfilePromise;
 
 function normalize(value = '') {
@@ -42,9 +40,7 @@ function normalize(value = '') {
 }
 
 function queryTokens(query) {
-  return normalize(query)
-    .split(' ')
-    .filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token));
+  return normalize(query).split(' ').filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token));
 }
 
 function tokenize(value) {
@@ -52,12 +48,9 @@ function tokenize(value) {
 }
 
 function searchableText(item) {
-  return [
-    item.question,
-    item.title,
-    ...(item.aliases ?? []),
-    ...(item.keywords ?? [])
-  ].filter(Boolean).map(normalize);
+  return [item.question, item.title, ...(item.aliases ?? []), ...(item.keywords ?? [])]
+    .filter(Boolean)
+    .map(normalize);
 }
 
 function score(item, query) {
@@ -81,7 +74,6 @@ function score(item, query) {
 
   points += matchedPrimaryTokens * 45;
   points += matchedFieldTokens * 12;
-
   if (tokens.length > 1 && matchedPrimaryTokens === tokens.length) points += 90;
   if (tokens.length > 1 && matchedFieldTokens === tokens.length) points += 45;
 
@@ -90,7 +82,6 @@ function score(item, query) {
 
 function searchKnowledge(query) {
   const normalizedQuery = normalize(query);
-
   if (!normalizedQuery) return KNOWLEDGE.slice();
 
   return KNOWLEDGE
@@ -105,7 +96,6 @@ function paginate(items, offset) {
   const start = Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0;
   const results = items.slice(start, start + MAX_RESULTS);
   const next = start + results.length < items.length ? String(start + results.length) : '';
-
   return { results, next_offset: next };
 }
 
@@ -118,44 +108,15 @@ function htmlEscape(value = '') {
     .replaceAll("'", '&#39;');
 }
 
-function trimUrlPunctuation(value) {
-  let url = value.replace(/[.,;:!?]+$/g, '');
-
-  while (url.endsWith(')')) {
-    const open = (url.match(/\(/g) ?? []).length;
-    const close = (url.match(/\)/g) ?? []).length;
-    if (close <= open) break;
-    url = url.slice(0, -1);
-  }
-
-  return url;
+function safeResultId(prefix, value) {
+  const digest = createHash('sha256').update(String(value)).digest('hex').slice(0, 32);
+  return `${prefix}-${digest}`;
 }
 
-function richInlineText(value = '') {
-  const escaped = htmlEscape(value);
-  const tokenPattern = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_]{5,32})/g;
-  let result = '';
-  let cursor = 0;
-
-  for (const match of escaped.matchAll(tokenPattern)) {
-    const token = match[0];
-    const index = match.index ?? 0;
-    result += escaped.slice(cursor, index);
-
-    if (token.startsWith('@')) {
-      const username = token.slice(1);
-      result += `<tg-button type="url" style="success" url="https://t.me/${username}">🤖 ${token}</tg-button>`;
-      cursor = index + token.length;
-      continue;
-    }
-
-    const url = trimUrlPunctuation(token);
-    const trailing = token.slice(url.length);
-    result += `<tg-button type="url" style="primary" url="${url}">🔗 Open link</tg-button>${trailing}`;
-    cursor = index + token.length;
-  }
-
-  return result + escaped.slice(cursor);
+function sourceTypeLabel(item) {
+  if (item.type === 'faq') return 'Telegram FAQ';
+  if (item.type === 'terms') return 'Official Telegram terms';
+  return 'Official Telegram guide';
 }
 
 function expandableAnswer(text) {
@@ -166,15 +127,9 @@ function expandableAnswer(text) {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map((block) => block.split('\n').map((line) => richInlineText(line.trim())).join('<br>'));
+    .map((block) => block.split('\n').map((line) => htmlEscape(line.trim())).join('<br>'));
 
   return `<blockquote expandable>${blocks.join('<br><br>')}</blockquote>`;
-}
-
-function sourceTypeLabel(item) {
-  if (item.type === 'faq') return 'Telegram FAQ';
-  if (item.type === 'terms') return 'Official Telegram terms';
-  return 'Official Telegram guide';
 }
 
 function renderRichAnswer(item) {
@@ -200,16 +155,11 @@ function renderRichAnswer(item) {
 }
 
 function richMessageContent(item) {
-  return {
-    rich_message: {
-      html: renderRichAnswer(item)
-    }
-  };
+  return { rich_message: { html: renderRichAnswer(item) } };
 }
 
 function noResultsContent(query) {
   const displayQuery = String(query ?? '').trim().slice(0, 100);
-
   return {
     rich_message: {
       html: [
@@ -225,10 +175,9 @@ function noResultsContent(query) {
 
 function noResultsHelpArticle(query) {
   const displayQuery = String(query ?? '').trim().slice(0, 100);
-
   return {
     type: 'article',
-    id: `search-help-${normalize(displayQuery).slice(0, 40) || 'empty'}`,
+    id: safeResultId('search-help', displayQuery || 'empty'),
     title: 'How to search this bot',
     description: 'Use a short, specific Telegram question.',
     input_message_content: {
@@ -249,12 +198,11 @@ function inlineResults(query, offset) {
 
   if (!allMatches.length) {
     if (offset) return { results: [], next_offset: '' };
-
     return {
       results: [
         {
           type: 'article',
-          id: `no-results-${normalize(query).slice(0, 50) || 'empty'}`,
+          id: safeResultId('no-results', query || 'empty'),
           title: query.trim() ? `No results for “${query.trim().slice(0, 60)}”` : 'No results found',
           description: 'No matching information in the official Telegram sources.',
           input_message_content: noResultsContent(query)
@@ -268,13 +216,12 @@ function inlineResults(query, offset) {
   const page = paginate(allMatches, offset);
 
   return {
-    results: page.results.map((item, index) => {
+    results: page.results.map((item) => {
       const title = item.question ?? item.title ?? 'Telegram documentation';
       const description = item.source?.title ? `${item.source.title} • Official` : 'Official Telegram source';
-
       return {
         type: 'article',
-        id: item.id ?? `knowledge-${index}`,
+        id: safeResultId('faq', item.id ?? title),
         title,
         description,
         url: item.source?.url,
@@ -303,7 +250,6 @@ async function telegram(method, payload) {
     error.description = body?.description ?? '';
     throw error;
   }
-
   return body;
 }
 
@@ -313,14 +259,12 @@ function isExpiredInlineQueryError(error) {
 
 async function getBotProfile(forceRefresh = false) {
   if (forceRefresh) botProfilePromise = null;
-
   if (!botProfilePromise) {
     botProfilePromise = telegram('getMe').then((response) => response.result).catch((error) => {
       botProfilePromise = null;
       throw error;
     });
   }
-
   return botProfilePromise;
 }
 
@@ -331,7 +275,6 @@ function botUsername(profile) {
 function parseCommand(text, username) {
   const match = String(text ?? '').trim().match(/^\/(start|help|ping)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
   if (!match) return null;
-
   if (match[2] && username && match[2].toLowerCase() !== username.toLowerCase()) return null;
   return match[1].toLowerCase();
 }
@@ -374,10 +317,7 @@ async function pingMessageHtml() {
 }
 
 async function sendRichMessage(chatId, html) {
-  return telegram('sendRichMessage', {
-    chat_id: chatId,
-    rich_message: { html }
-  });
+  return telegram('sendRichMessage', { chat_id: chatId, rich_message: { html } });
 }
 
 function authorizedWebhook(req) {
@@ -406,8 +346,8 @@ export default async function handler(req, res) {
     const update = req.body ?? {};
 
     if (update.inline_query) {
-      const query = update.inline_query.query ?? '';
-      const offset = update.inline_query.offset ?? '';
+      const query = String(update.inline_query.query ?? '');
+      const offset = String(update.inline_query.offset ?? '');
       const started = performance.now();
 
       try {
