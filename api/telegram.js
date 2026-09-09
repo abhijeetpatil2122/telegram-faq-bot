@@ -3,6 +3,14 @@ import path from 'node:path';
 
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
 const MAX_RESULTS = 10;
+const MIN_SCORE = 24;
+
+const SEARCH_STOPWORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do', 'does',
+  'for', 'from', 'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or',
+  'please', 'tell', 'that', 'the', 'this', 'to', 'what', 'when', 'where',
+  'which', 'who', 'why', 'with', 'you', 'your'
+]);
 
 function loadKnowledge() {
   try {
@@ -14,6 +22,8 @@ function loadKnowledge() {
   }
 }
 
+const KNOWLEDGE = loadKnowledge();
+
 function normalize(value = '') {
   return String(value)
     .toLowerCase()
@@ -21,6 +31,16 @@ function normalize(value = '') {
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function queryTokens(query) {
+  return normalize(query)
+    .split(' ')
+    .filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token));
+}
+
+function tokenize(value) {
+  return new Set(normalize(value).split(' ').filter(Boolean));
 }
 
 function searchableText(item) {
@@ -34,36 +54,38 @@ function searchableText(item) {
 
 function score(item, query) {
   const normalizedQuery = normalize(query);
-  if (!normalizedQuery) return 0;
+  const tokens = queryTokens(query);
+  if (!normalizedQuery || !tokens.length) return 0;
 
-  const queryTokens = normalizedQuery.split(' ').filter((token) => token.length >= 2);
   const fields = searchableText(item);
+  const primary = normalize(item.question ?? item.title ?? '');
+  const primaryTokens = tokenize(primary);
   let points = 0;
 
   for (const field of fields) {
-    if (field === normalizedQuery) points += 180;
-    else if (field.startsWith(normalizedQuery)) points += 100;
-    else if (field.includes(normalizedQuery)) points += 65;
-
-    for (const token of queryTokens) {
-      if (field.includes(token)) points += 7;
-    }
+    if (field === normalizedQuery) points += 300;
+    else if (field.startsWith(normalizedQuery)) points += 160;
+    else if (field.includes(normalizedQuery)) points += 90;
   }
 
-  const primary = normalize(item.question ?? item.title ?? '');
-  const matchedTokens = queryTokens.filter((token) => primary.includes(token)).length;
-  points += matchedTokens * 15;
+  const matchedPrimaryTokens = tokens.filter((token) => primaryTokens.has(token)).length;
+  const matchedFieldTokens = tokens.filter((token) => fields.some((field) => tokenize(field).has(token))).length;
+
+  points += matchedPrimaryTokens * 45;
+  points += matchedFieldTokens * 12;
+
+  if (tokens.length > 1 && matchedPrimaryTokens === tokens.length) points += 90;
+  if (tokens.length > 1 && matchedFieldTokens === tokens.length) points += 45;
 
   return points;
 }
 
 function searchKnowledge(query) {
-  const items = loadKnowledge();
-  if (!normalize(query)) return items.slice(0, MAX_RESULTS);
+  if (!normalize(query)) return KNOWLEDGE.slice(0, MAX_RESULTS);
 
-  return items
+  return KNOWLEDGE
     .map((item) => ({ item, score: score(item, query) }))
-    .filter(({ score: itemScore }) => itemScore > 0)
+    .filter(({ score: itemScore }) => itemScore >= MIN_SCORE)
     .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title).localeCompare(b.item.question ?? b.item.title))
     .slice(0, MAX_RESULTS)
     .map(({ item }) => item);
@@ -77,17 +99,79 @@ function htmlEscape(value = '') {
     .replaceAll('"', '&quot;');
 }
 
-function sourceLink(item) {
-  const url = item.source?.url;
-  return url ? `\n\n<a href="${htmlEscape(url)}">📖 Official Telegram source</a>` : '';
+function richTextBlocks(text) {
+  const normalized = String(text ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!normalized) return '<p>No answer text is available for this entry.</p>';
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      const isUnorderedList = lines.length > 0 && lines.every((line) => /^[-•*]\s+/.test(line));
+      const isOrderedList = lines.length > 0 && lines.every((line) => /^\d+[.)]\s+/.test(line));
+
+      if (isUnorderedList) {
+        return `<ul>${lines.map((line) => `<li>${htmlEscape(line.replace(/^[-•*]\s+/, ''))}</li>`).join('')}</ul>`;
+      }
+
+      if (isOrderedList) {
+        return `<ol>${lines.map((line) => `<li>${htmlEscape(line.replace(/^\d+[.)]\s+/, ''))}</li>`).join('')}</ol>`;
+      }
+
+      return `<p>${lines.map(htmlEscape).join('<br>')}</p>`;
+    })
+    .join('\n');
 }
 
-function renderAnswer(item) {
+function sourceTypeLabel(item) {
+  if (item.type === 'faq') return 'Telegram FAQ';
+  if (item.type === 'terms') return 'Official Telegram terms';
+  return 'Official Telegram guide';
+}
+
+function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
   const body = item.answer ?? item.content ?? '';
-  const type = item.type === 'faq' ? 'FAQ' : item.type === 'terms' ? 'Official terms' : 'Official guide';
+  const sourceUrl = item.source?.url;
+  const sourceTitle = item.source?.title ?? 'Official Telegram source';
+  const sourceType = sourceTypeLabel(item);
 
-  return `<b>❓ ${htmlEscape(title)}</b>\n\n${htmlEscape(body)}\n\n<i>Source type: ${htmlEscape(type)}</i>${sourceLink(item)}`;
+  const sourceButton = sourceUrl
+    ? `<tg-button-row align="center"><tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">📖 Official source</tg-button></tg-button-row>`
+    : '';
+
+  return [
+    `<h2>❓ ${htmlEscape(title)}</h2>`,
+    '<p><b>Answer</b></p>',
+    richTextBlocks(body),
+    '<hr>',
+    `<details><summary>About this answer</summary><p><b>Source:</b> ${htmlEscape(sourceTitle)}<br><b>Type:</b> ${htmlEscape(sourceType)}</p></details>`,
+    sourceButton,
+    '<footer>Telegram FAQ Bot • Official Telegram documentation only</footer>'
+  ].filter(Boolean).join('\n');
+}
+
+function richMessageContent(item) {
+  return {
+    rich_message: {
+      html: renderRichAnswer(item)
+    }
+  };
+}
+
+function noResultsContent() {
+  return {
+    rich_message: {
+      html: [
+        '<h2>Nothing found</h2>',
+        '<p>This bot only answers questions supported by the official Telegram sources in its knowledge base.</p>',
+        '<details><summary>What is covered?</summary><ul><li>Telegram FAQ</li><li>Bot FAQ and developer guides</li><li>Bot features</li><li>Official bot terms</li></ul></details>',
+        '<footer>Try a more specific Telegram or bot-related question.</footer>'
+      ].join('\n')
+    }
+  };
 }
 
 function inlineResults(query) {
@@ -99,10 +183,7 @@ function inlineResults(query) {
       id: 'no-results',
       title: 'No official answer found',
       description: 'No matching information exists in the indexed Telegram sources.',
-      input_message_content: {
-        message_text: '<b>Nothing found</b>\n\nThis bot only answers questions supported by its official Telegram documentation and terms.',
-        parse_mode: 'HTML'
-      }
+      input_message_content: noResultsContent()
     }];
   }
 
@@ -115,11 +196,8 @@ function inlineResults(query) {
       id: item.id ?? `knowledge-${index}`,
       title,
       description,
-      input_message_content: {
-        message_text: renderAnswer(item),
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      }
+      url: item.source?.url,
+      input_message_content: richMessageContent(item)
     };
   });
 }
