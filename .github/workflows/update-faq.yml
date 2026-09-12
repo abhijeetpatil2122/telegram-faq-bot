@@ -1,12 +1,13 @@
 name: Update Telegram Knowledge
 
-# Search benchmark and knowledge validation are part of every knowledge update.
-# Benchmark now accepts all relevant official sources for each intent.
+# Search benchmark, runtime hardening tests and knowledge validation are part of every knowledge update.
+# Benchmark accepts all relevant official sources for each intent.
 
 on:
   push:
     branches: [main]
     paths:
+      - 'api/telegram.js'
       - 'scripts/crawl/**'
       - 'scripts/tests/**'
       - 'scripts/search-engine.mjs'
@@ -38,6 +39,8 @@ jobs:
         run: node --check api/telegram.js
       - name: Validate crawler and search tests
         run: npm run check
+      - name: Run runtime hardening tests
+        run: npm run runtime:test
       - name: Crawl official Telegram sources
         run: node scripts/crawl/index.mjs
       - name: Validate generated knowledge
