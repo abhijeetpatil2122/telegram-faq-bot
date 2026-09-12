@@ -1,45 +1,45 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T07:31:35.790Z",
+  "generatedAt": "2026-09-12T10:30:50.220Z",
   "status": "success",
   "sources": {
     "telegram-faq": {
-      "items": 121,
-      "hash": "994b322e11b8c528e4dc2d576dbdac5cada2a90cb31ddaad1c5419e04ffc0520"
+      "items": 90,
+      "hash": "fd45a7f140c831898ff63e59016cbbdd1e31e6fd7fe5d90e04dc00ec415a7afa"
     },
     "telegram-faq-spam": {
-      "items": 11,
-      "hash": "661e7ac27642185583f38b6b9608b2e385b484493a35d9ecef03261513b02161"
+      "items": 8,
+      "hash": "9b1fa8fc3a482b9709d5fb7157eff7eea17790b649763ecd985284e81e043f31"
     },
     "telegram-faq-premium": {
-      "items": 74,
-      "hash": "3cc681a3879da4c9c49f9f9f04d66dce2c6ffbc360da6727abd5d815649fdaca"
+      "items": 44,
+      "hash": "bb34fb8a28014d3b93a13a964a4ae0ac0fe34caee5ec6e8a57f7f418fe16affb"
     },
     "telegram-faq-channels": {
-      "items": 11,
-      "hash": "304d43cf484ffbc94297a0fb59f88cb8e0ed9bcb8e23c85ec4c8488bb74c8dcf"
+      "items": 8,
+      "hash": "b3c661a1777c587766b61ef6e6f68d83bdc2876e90ed79094a7dfd16b37ca97d"
     },
     "bots-faq": {
-      "items": 23,
-      "hash": "f6ce6fa1af6069e76407fc147b92bdacbd7c358dfe4323e8d6d727dce33b19b7"
+      "items": 13,
+      "hash": "ac9ac67bf2e251f358f389a74d5d2d98c780b53ee00dee3ade8236922c3a1c6c"
     },
     "bots": {
       "items": 20,
-      "hash": "cd378136ae5476fe4b24e7653aae46ac44079e02e2bbff84efc56b43ee82e6e4"
+      "hash": "6b586eb1c5992b212de2b8e35312f1eacf5db8e38c21e2f07fbfbbddbe4c8016"
     },
     "bot-features": {
       "items": 86,
-      "hash": "a51968b51feebb5ae9ab63bc8c85068c32a073670b4a78f216b83bc42ccb0133"
+      "hash": "daa9dcebc4ffbc16fc340a805acc4673ac373e632371886f85816e8f49c53346"
     },
     "bot-developer-terms": {
       "items": 58,
-      "hash": "2842dfe22b589a54a791dab1026614b6061f19d683c9a4e837372c7888de4279"
+      "hash": "f82dcfed4cc1d2f0a411a1bfd1d6d470031a82de9352407c59b819c1803962e2"
     },
     "bot-terms": {
       "items": 19,
-      "hash": "630a05069ae6885cbeec417a9b268adc431172043fec37ece79269b4930cea19"
+      "hash": "e699892fb8c6570447a3943e9afbf0db6cc2559ec8b35f34a66f44a9b12d9374"
     }
   },
-  "totalItems": 423,
+  "totalItems": 346,
   "totalSources": 9
 }
