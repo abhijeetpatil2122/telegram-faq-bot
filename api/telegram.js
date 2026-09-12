@@ -11,6 +11,18 @@ const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a
 const HELP_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/510c3a83-8a96-416c-b1ea-a37dddb6638f';
 const NO_RESULTS_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/6132b4a1-1e93-41a7-a76f-fa199577ad90';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
+const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
+const TELEGRAM_REQUEST_TIMEOUT_MS = 7000;
+const TELEGRAM_MAX_ATTEMPTS = 2;
+const TELEGRAM_RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const TELEGRAM_MAX_RETRY_AFTER_MS = 5000;
+const MAX_TRACKED_UPDATES = 5000;
+const PROCESSED_UPDATE_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_RICH_MESSAGE_BYTES = 32768;
+const RICH_FALLBACK_BYTES = 30000;
+
+const processedUpdates = new Map();
+const inFlightUpdates = new Map();
 
 function loadKnowledge() {
   try {
@@ -118,6 +130,35 @@ function renderRichAnswer(item) {
   ].filter(Boolean).join('\n');
 }
 
+function richByteLength(value) {
+  return Buffer.byteLength(String(value ?? ''), 'utf8');
+}
+
+function truncateUtf8(value, maxBytes) {
+  let result = String(value ?? '');
+  if (richByteLength(result) <= maxBytes) return result;
+  while (result && richByteLength(`${result}…`) > maxBytes) {
+    result = result.slice(0, -1);
+  }
+  return `${result}…`;
+}
+
+function plainTextFromHtml(value) {
+  return String(value ?? '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function fitRichMessage(html, fallbackText = '') {
+  const source = String(html ?? '');
+  if (richByteLength(source) <= MAX_RICH_MESSAGE_BYTES) return source;
+
+  const safeText = truncateUtf8(plainTextFromHtml(fallbackText || source), RICH_FALLBACK_BYTES);
+  return `<p>${htmlEscape(safeText)}</p>`;
+}
+
 function noResultsContent(query) {
   return {
     rich_message: {
@@ -148,20 +189,21 @@ function noResultsHelpArticle(query) {
 }
 
 function inlineResults(query, offset) {
-  const allMatches = retrieveKnowledge(KNOWLEDGE, query, { minScore: MIN_SCORE });
+  const safeQuery = String(query ?? '').slice(0, 256);
+  const allMatches = retrieveKnowledge(KNOWLEDGE, safeQuery, { minScore: MIN_SCORE });
   if (!allMatches.length) {
     if (offset) return { results: [], next_offset: '' };
     return {
       results: [
         {
           type: 'article',
-          id: safeResultId('no-results', query || 'empty'),
-          title: query.trim() ? `No results for “${query.trim().slice(0, 60)}”` : 'No results found',
+          id: safeResultId('no-results', safeQuery || 'empty'),
+          title: safeQuery.trim() ? `No results for “${safeQuery.trim().slice(0, 60)}”` : 'No results found',
           description: 'No matching information in the official Telegram sources.',
           thumbnail_url: NO_RESULTS_THUMBNAIL_URL,
-          input_message_content: noResultsContent(query)
+          input_message_content: noResultsContent(safeQuery)
         },
-        noResultsHelpArticle(query)
+        noResultsHelpArticle(safeQuery)
       ],
       next_offset: ''
     };
@@ -172,35 +214,137 @@ function inlineResults(query, offset) {
     results: page.results.map((item) => ({
       type: 'article',
       id: safeResultId('faq', item.id ?? item.question ?? item.title),
-      title: item.question ?? item.title ?? 'Telegram documentation',
+      title: String(item.question ?? item.title ?? 'Telegram documentation').slice(0, 256),
       description: niceDescription(item),
       thumbnail_url: ARTICLE_THUMBNAIL_URL,
-      input_message_content: { rich_message: { html: renderRichAnswer(item) } }
+      input_message_content: {
+        rich_message: {
+          html: fitRichMessage(renderRichAnswer(item), item.answer ?? item.answer_html ?? '')
+        }
+      }
     })),
-    next_offset: page.next_offset
+    next_offset: String(page.next_offset ?? '').slice(0, 64)
   };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function telegram(method, payload) {
   const token = process.env.BOT_TOKEN;
   if (!token) throw new Error('BOT_TOKEN is not configured');
-  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || body?.ok === false) {
-    const error = new Error(`Telegram ${method} failed: HTTP ${response.status} ${body?.description ?? ''}`.trim());
-    error.status = response.status;
-    error.description = body?.description ?? '';
-    throw error;
+
+  let lastError;
+  for (let attempt = 1; attempt <= TELEGRAM_MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TELEGRAM_REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      const body = await response.json().catch(() => null);
+      if (response.ok && body?.ok !== false) return body;
+
+      const error = new Error(`Telegram ${method} failed: HTTP ${response.status} ${body?.description ?? ''}`.trim());
+      error.status = response.status;
+      error.description = body?.description ?? '';
+      error.retryAfter = Number.isFinite(body?.parameters?.retry_after) ? body.parameters.retry_after : null;
+      lastError = error;
+
+      if (!TELEGRAM_RETRYABLE_STATUSES.has(error.status) || attempt >= TELEGRAM_MAX_ATTEMPTS) throw error;
+      const retryAfterMs = error.status === 429 && error.retryAfter != null
+        ? Math.min(Math.max(0, error.retryAfter * 1000), TELEGRAM_MAX_RETRY_AFTER_MS)
+        : 250;
+      await sleep(retryAfterMs);
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        lastError = new Error(`Telegram ${method} timed out after ${TELEGRAM_REQUEST_TIMEOUT_MS}ms`);
+        lastError.status = 408;
+      } else {
+        lastError = error;
+      }
+      if (attempt >= TELEGRAM_MAX_ATTEMPTS) throw lastError;
+      if (lastError?.status && !TELEGRAM_RETRYABLE_STATUSES.has(lastError.status)) throw lastError;
+      await sleep(250);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
-  return body;
+
+  throw lastError ?? new Error(`Telegram ${method} failed`);
 }
 
 function isExpiredInlineQueryError(error) {
   return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');
+}
+
+function cleanupProcessedUpdates(now = Date.now()) {
+  for (const [updateId, timestamp] of processedUpdates) {
+    if (now - timestamp > PROCESSED_UPDATE_TTL_MS) processedUpdates.delete(updateId);
+  }
+  while (processedUpdates.size > MAX_TRACKED_UPDATES) {
+    const oldest = processedUpdates.keys().next().value;
+    if (oldest === undefined) break;
+    processedUpdates.delete(oldest);
+  }
+}
+
+function hasProcessedUpdate(updateId) {
+  cleanupProcessedUpdates();
+  return processedUpdates.has(updateId);
+}
+
+function markProcessedUpdate(updateId) {
+  cleanupProcessedUpdates();
+  processedUpdates.set(updateId, Date.now());
+  cleanupProcessedUpdates();
+}
+
+async function processUpdateOnce(updateId, processor) {
+  if (hasProcessedUpdate(updateId)) return false;
+  if (inFlightUpdates.has(updateId)) {
+    await inFlightUpdates.get(updateId);
+    return false;
+  }
+
+  const promise = (async () => {
+    await processor();
+    markProcessedUpdate(updateId);
+  })();
+  inFlightUpdates.set(updateId, promise);
+  try {
+    await promise;
+  } finally {
+    inFlightUpdates.delete(updateId);
+  }
+  return true;
+}
+
+function parseWebhookBody(request) {
+  const raw = request.body;
+  if (raw && typeof raw === 'object' && !Buffer.isBuffer(raw)) return raw;
+  if (Buffer.isBuffer(raw)) {
+    if (raw.length > MAX_WEBHOOK_BODY_BYTES) throw Object.assign(new Error('Webhook body is too large'), { status: 413 });
+    return JSON.parse(raw.toString('utf8'));
+  }
+  if (typeof raw === 'string') {
+    if (Buffer.byteLength(raw, 'utf8') > MAX_WEBHOOK_BODY_BYTES) throw Object.assign(new Error('Webhook body is too large'), { status: 413 });
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw Object.assign(new Error('Webhook body is not valid JSON'), { status: 400 });
+    }
+  }
+  if (raw == null) throw Object.assign(new Error('Webhook body is required'), { status: 400 });
+  throw Object.assign(new Error('Unsupported webhook body'), { status: 400 });
+}
+
+function validUpdateId(value) {
+  return Number.isSafeInteger(value) && value >= 0;
 }
 
 async function getBotProfile(forceRefresh = false) {
@@ -282,7 +426,7 @@ async function handleMessage(update, profile) {
 
   await telegram('sendRichMessage', {
     chat_id: message.chat.id,
-    rich_message: { html },
+    rich_message: { html: fitRichMessage(html, plainTextFromHtml(html)) },
     disable_notification: false
   });
 }
@@ -294,38 +438,53 @@ export default async function handler(request, response) {
   }
 
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (secret && request.headers['x-telegram-bot-api-secret-token'] !== secret) {
+  if (!secret || request.headers['x-telegram-bot-api-secret-token'] !== secret) {
     response.status(401).json({ ok: false });
     return;
   }
 
+  let update;
   try {
-    const update = request.body ?? {};
-    const profile = await getBotProfile();
+    update = parseWebhookBody(request);
+  } catch (error) {
+    response.status(error?.status ?? 400).json({ ok: false });
+    return;
+  }
 
-    if (update.inline_query) {
-      const queryId = update.inline_query.id;
-      const query = update.inline_query.query ?? '';
-      const offset = update.inline_query.offset ?? '';
-      try {
-        const page = inlineResults(query, offset);
-        await telegram('answerInlineQuery', {
-          inline_query_id: queryId,
-          results: page.results,
-          cache_time: INLINE_CACHE_TIME,
-          is_personal: true,
-          next_offset: page.next_offset
-        });
-      } catch (error) {
-        if (!isExpiredInlineQueryError(error)) throw error;
+  if (!update || typeof update !== 'object' || !validUpdateId(update.update_id)) {
+    response.status(400).json({ ok: false });
+    return;
+  }
+
+  try {
+    await processUpdateOnce(update.update_id, async () => {
+      const profile = await getBotProfile();
+
+      if (update.inline_query) {
+        const queryId = update.inline_query.id;
+        if (!queryId) return;
+        const query = String(update.inline_query.query ?? '').slice(0, 256);
+        const offset = String(update.inline_query.offset ?? '').slice(0, 64);
+        try {
+          const page = inlineResults(query, offset);
+          await telegram('answerInlineQuery', {
+            inline_query_id: queryId,
+            results: page.results.slice(0, MAX_RESULTS),
+            cache_time: INLINE_CACHE_TIME,
+            is_personal: true,
+            next_offset: page.next_offset
+          });
+        } catch (error) {
+          if (!isExpiredInlineQueryError(error)) throw error;
+        }
+      } else if (update.message) {
+        await handleMessage(update, profile);
       }
-    } else if (update.message) {
-      await handleMessage(update, profile);
-    }
+    });
 
     response.status(200).json({ ok: true });
   } catch (error) {
     console.error('Webhook error:', error);
-    response.status(200).json({ ok: false });
+    response.status(error?.status && error.status >= 400 && error.status < 600 ? error.status : 500).json({ ok: false });
   }
 }
