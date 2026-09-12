@@ -16,7 +16,7 @@ const ALLOWED_PROTOCOLS = new Set(crawlerConfig.allowedProtocols);
 function normalize(value = '') { return String(value).toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
 function cleanText(value = '') { return String(value).replace(/\u00a0/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim(); }
 function cleanTitle(value = '') { return cleanText(value).replace(/^Q:\s*/i, '').replace(/\s+[#§]+\s*$/g, '').trim(); }
-function safeId(sourceId, title) { return `${sourceId}-${createHash('sha256').update(`${sourceId}\n${title}`).digest('hex').slice(0, 20)}`; }
+function safeId(sourceId, title, section, index) { return `${sourceId}-${createHash('sha256').update(`${sourceId}\n${section || ''}\n${title}\n${index}`).digest('hex').slice(0, 20)}`; }
 function escapeHtml(value = '') { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;'); }
 function safeUrl(value, base) { const raw = String(value ?? '').trim(); if (!raw || /^(?:javascript|data|vbscript):/i.test(raw)) return null; try { const url = new URL(raw, base); return ALLOWED_PROTOCOLS.has(url.protocol) ? url.toString() : null; } catch { return null; } }
 function keywordsFor(title, answer) { return [...new Set(`${normalize(title)} ${normalize(answer).slice(0, 5000)}`.split(' ').filter((x) => (x.length >= 3 || ['api','app','bot','bots','faq','otp','url'].includes(x)) && !STOPWORDS.has(x)))].slice(0, 100); }
@@ -62,7 +62,7 @@ function extract(html, source) {
     const answerHtml = renderNodes(nodes.slice(heading.index + 1, end), $, source.url); const answer = plain(answerHtml); if (answer.length < 20) continue;
     let section = null; for (let j = h - 1; j >= 0; j -= 1) if (headings[j].level < heading.level) { section = headings[j].text; break; }
     const title = heading.text;
-    items.push({ id: safeId(source.id, title), type: source.kind, category: source.category, title, question: title, section, aliases: [], keywords: keywordsFor(title, answer), answer: answer.slice(0, crawlerConfig.maxAnswerChars), answer_html: answerHtml.slice(0, crawlerConfig.maxAnswerChars), source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } });
+    items.push({ id: safeId(source.id, title, section, h), type: source.kind, category: source.category, title, question: title, section, aliases: [], keywords: keywordsFor(title, answer), answer: answer.slice(0, crawlerConfig.maxAnswerChars), answer_html: answerHtml.slice(0, crawlerConfig.maxAnswerChars), source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } });
   }
   return items;
 }
