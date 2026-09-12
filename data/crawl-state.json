@@ -1,43 +1,43 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T10:30:50.220Z",
+  "generatedAt": "2026-09-12T10:42:04.289Z",
   "status": "success",
   "sources": {
     "telegram-faq": {
       "items": 90,
-      "hash": "fd45a7f140c831898ff63e59016cbbdd1e31e6fd7fe5d90e04dc00ec415a7afa"
+      "hash": "d2eec60fd11b94ea27acf34229cfa9d0ce94589f066775122edef87d0446cba4"
     },
     "telegram-faq-spam": {
       "items": 8,
-      "hash": "9b1fa8fc3a482b9709d5fb7157eff7eea17790b649763ecd985284e81e043f31"
+      "hash": "a3627b988131e25ea461cc6bf3e0de12aaa4f1c83593cca4b2322714a689c94b"
     },
     "telegram-faq-premium": {
       "items": 44,
-      "hash": "bb34fb8a28014d3b93a13a964a4ae0ac0fe34caee5ec6e8a57f7f418fe16affb"
+      "hash": "670dce78ce3e3acf2393546b435f56e235d4a650d5f1ab88687e1503c0510b42"
     },
     "telegram-faq-channels": {
       "items": 8,
-      "hash": "b3c661a1777c587766b61ef6e6f68d83bdc2876e90ed79094a7dfd16b37ca97d"
+      "hash": "a0e4611d4998edc9261d02f55e9fec25663e146e6808c122abb397cb2ed6250e"
     },
     "bots-faq": {
       "items": 13,
-      "hash": "ac9ac67bf2e251f358f389a74d5d2d98c780b53ee00dee3ade8236922c3a1c6c"
+      "hash": "42e16e58a880980609a533e7a5a9d61d07d7b92999f0b1cc219c5f44df2e005a"
     },
     "bots": {
       "items": 20,
-      "hash": "6b586eb1c5992b212de2b8e35312f1eacf5db8e38c21e2f07fbfbbddbe4c8016"
+      "hash": "256f10432ddcd5ebc8c5879d89e238b21360781bb6c23544b381595e54940471"
     },
     "bot-features": {
       "items": 86,
-      "hash": "daa9dcebc4ffbc16fc340a805acc4673ac373e632371886f85816e8f49c53346"
+      "hash": "0656ec5354c65770c25fa251be908367f4e340b6cd3cba11f050f6866db9f8aa"
     },
     "bot-developer-terms": {
       "items": 58,
-      "hash": "f82dcfed4cc1d2f0a411a1bfd1d6d470031a82de9352407c59b819c1803962e2"
+      "hash": "37237efd7a6ddd666669aea1b3a2d54adb7f37396f566b2540d3b9f5a53f4e48"
     },
     "bot-terms": {
       "items": 19,
-      "hash": "e699892fb8c6570447a3943e9afbf0db6cc2559ec8b35f34a66f44a9b12d9374"
+      "hash": "869fa5762356f06fa8f41980251065310b08002fbdd23624c703a477d822518e"
     }
   },
   "totalItems": 346,
