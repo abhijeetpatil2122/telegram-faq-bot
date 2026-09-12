@@ -1,17 +1,17 @@
 {
-  "version": 2,
+  "version": 3,
   "sources": [
-    {"id":"telegram-faq","title":"Telegram FAQ","url":"https://telegram.org/faq","kind":"faq","audience":"user","category":"USER_HELP","priority":100,"enabled":true,"index":true},
-    {"id":"telegram-faq-spam","title":"Telegram Spam FAQ","url":"https://telegram.org/faq_spam","kind":"faq","audience":"user","category":"SECURITY","priority":100,"enabled":true,"index":true},
-    {"id":"telegram-faq-premium","title":"Telegram Premium FAQ","url":"https://telegram.org/faq_premium","kind":"faq","audience":"user","category":"PREMIUM","priority":95,"enabled":true,"index":true},
-    {"id":"telegram-faq-channels","title":"Telegram Channels FAQ","url":"https://telegram.org/faq_channels","kind":"faq","audience":"user","category":"CHANNELS","priority":95,"enabled":true,"index":true},
-    {"id":"bots-faq","title":"Bots FAQ","url":"https://core.telegram.org/bots/faq","kind":"faq","audience":"developer","category":"BOTS","priority":90,"enabled":true,"index":true},
-    {"id":"bots","title":"Bots: An introduction for developers","url":"https://core.telegram.org/bots","kind":"guide","audience":"developer","category":"BOTS","priority":80,"enabled":true,"index":true},
-    {"id":"bot-features","title":"Telegram Bot Features","url":"https://core.telegram.org/bots/features","kind":"guide","audience":"developer","category":"BOTS","priority":80,"enabled":true,"index":true},
-    {"id":"bot-developer-terms","title":"Telegram Bot Developer Terms","url":"https://telegram.org/tos/bot-developers","kind":"terms","audience":"developer","category":"LEGAL","priority":70,"enabled":true,"index":true},
-    {"id":"bot-terms","title":"Telegram Bot Terms","url":"https://telegram.org/tos/bots","kind":"terms","audience":"user","category":"LEGAL","priority":70,"enabled":true,"index":true},
-    {"id":"telegram-blog","title":"Telegram Blog","url":"https://telegram.org/blog","kind":"discovery","audience":"user","category":"NEWS","priority":40,"enabled":true,"index":false},
-    {"id":"telegram-evolution","title":"Telegram Evolution","url":"https://telegram.org/evolution/","kind":"discovery","audience":"user","category":"NEWS","priority":30,"enabled":true,"index":false},
-    {"id":"bot-api","title":"Telegram Bot API","url":"https://core.telegram.org/bots/api","kind":"developer-reference","audience":"developer","category":"BOTS","priority":10,"enabled":true,"index":false}
+    {"id":"telegram-faq","title":"Telegram FAQ","url":"https://telegram.org/faq","kind":"faq","extractor":"faq-q","audience":"user","category":"USER_HELP","priority":100,"enabled":true,"index":true},
+    {"id":"telegram-faq-spam","title":"Telegram Spam FAQ","url":"https://telegram.org/faq_spam","kind":"faq","extractor":"faq-q","audience":"user","category":"SECURITY","priority":100,"enabled":true,"index":true},
+    {"id":"telegram-faq-premium","title":"Telegram Premium FAQ","url":"https://telegram.org/faq_premium","kind":"faq","extractor":"faq-q","audience":"user","category":"PREMIUM","priority":95,"enabled":true,"index":true},
+    {"id":"telegram-faq-channels","title":"Telegram Channels FAQ","url":"https://telegram.org/faq_channels","kind":"faq","extractor":"faq-q","audience":"user","category":"CHANNELS","priority":95,"enabled":true,"index":true},
+    {"id":"bots-faq","title":"Bots FAQ","url":"https://core.telegram.org/bots/faq","kind":"faq","extractor":"faq-heading","audience":"developer","category":"BOTS","priority":90,"enabled":true,"index":true},
+    {"id":"bots","title":"Bots: An introduction for developers","url":"https://core.telegram.org/bots","kind":"guide","extractor":"sections","audience":"developer","category":"BOTS","priority":80,"enabled":true,"index":true},
+    {"id":"bot-features","title":"Telegram Bot Features","url":"https://core.telegram.org/bots/features","kind":"guide","extractor":"sections","audience":"developer","category":"BOTS","priority":80,"enabled":true,"index":true},
+    {"id":"bot-developer-terms","title":"Telegram Bot Developer Terms","url":"https://telegram.org/tos/bot-developers","kind":"terms","extractor":"sections","audience":"developer","category":"LEGAL","priority":70,"enabled":true,"index":true},
+    {"id":"bot-terms","title":"Telegram Bot Terms","url":"https://telegram.org/tos/bots","kind":"terms","extractor":"sections","audience":"user","category":"LEGAL","priority":70,"enabled":true,"index":true},
+    {"id":"telegram-blog","title":"Telegram Blog","url":"https://telegram.org/blog","kind":"discovery","extractor":"sections","audience":"user","category":"NEWS","priority":40,"enabled":true,"index":false},
+    {"id":"telegram-evolution","title":"Telegram Evolution","url":"https://telegram.org/evolution/","kind":"discovery","extractor":"sections","audience":"user","category":"NEWS","priority":30,"enabled":true,"index":false},
+    {"id":"bot-api","title":"Telegram Bot API","url":"https://core.telegram.org/bots/api","kind":"developer-reference","extractor":"sections","audience":"developer","category":"BOTS","priority":10,"enabled":true,"index":false}
   ]
 }
