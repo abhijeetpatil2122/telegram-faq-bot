@@ -6,7 +6,7 @@ const file = path.join(root, 'data', 'knowledge.json');
 const config = JSON.parse(await fs.readFile(path.join(root, 'config', 'sources.json'), 'utf8'));
 const data = JSON.parse(await fs.readFile(file, 'utf8'));
 
-if (![2,3].includes(data.schemaVersion)) throw new Error(`Unsupported knowledge schemaVersion: ${data.schemaVersion}`);
+if (![2, 3].includes(data.schemaVersion)) throw new Error(`Unsupported knowledge schemaVersion: ${data.schemaVersion}`);
 if (!Array.isArray(data.sources) || data.sources.length < 1) throw new Error('No knowledge sources configured');
 if (!Array.isArray(data.items) || data.items.length < 1) throw new Error('Knowledge dataset is empty');
 
@@ -24,10 +24,10 @@ for (const item of data.items) {
   if (!item.source.url?.startsWith('https://')) throw new Error(`Invalid source URL for ${item.id}`);
   if (item.answer.length < 20 || item.answer_html.length < 20) throw new Error(`Answer too short for ${item.id}`);
   if (data.schemaVersion >= 3 && !item.category) throw new Error(`Missing category for ${item.id}`);
-  const tags = [...item.answer_html.matchAll(/<\\/?([A-Za-z0-9:-]+)/g)].map((match) => match[1].toLowerCase());
+  const tags = [...item.answer_html.matchAll(/<\/?([A-Za-z0-9:-]+)/g)].map((match) => match[1].toLowerCase());
   for (const tag of tags) if (!allowedTags.has(tag)) throw new Error(`Unsupported Rich HTML tag <${tag}> in ${item.id}`);
   ids.add(item.id);
-  const normalized = `${item.source.id}::${item.title.toLowerCase().replace(/\\s+/g,' ').trim()}`;
+  const normalized = `${item.source.id}::${item.title.toLowerCase().replace(/\s+/g, ' ').trim()}`;
   if (questions.has(normalized)) throw new Error(`Duplicate title/question in source: ${item.title}`);
   questions.add(normalized);
 }
