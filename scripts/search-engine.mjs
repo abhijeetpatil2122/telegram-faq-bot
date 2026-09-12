@@ -147,7 +147,13 @@ function score(item, query) {
   const matchedAny = baseTokens.filter((token) => allSearchFields.some((field) => tokenSet(field).has(token))).length;
   if (matchedAny === uniqueTokenCount) points += 120; else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
   const fuzzy = fuzzyMatchScore(baseTokens, [primary, fields.title, fields.section, fields.sourceTitle, ...fields.aliases, ...fields.keywords]);
-  points += Math.round(fuzzy.primaryScore * 85) + Math.round(fuzzy.anyScore * 18); if (fuzzy.matched === uniqueTokenCount && fuzzy.matched > 0) points += 80;
+  // For multi-word queries, fuzzy matches need at least one exact anchor word.
+  // This prevents unrelated phrases such as "neutron star gardening schedule"
+  // from becoming matches merely because several words are edit-distance-close.
+  if (matchedAny > 0 || baseTokens.length === 1) {
+    points += Math.round(fuzzy.primaryScore * 85) + Math.round(fuzzy.anyScore * 18);
+    if (fuzzy.matched === uniqueTokenCount && fuzzy.matched > 0) points += 80;
+  }
   if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
   if (detectedCategories.has(String(item.category ?? '').toUpperCase())) points += 150;
   const developerIntent = baseTokens.some((token) => DEV_INTENT.has(token)) || detectedIntents.has('developer');
