@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/crawl/**'
       - 'scripts/validate-knowledge.mjs'
+      - 'scripts/validate-rich-knowledge.mjs'
       - 'config/**'
       - 'package.json'
       - 'package-lock.json'
@@ -27,16 +28,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
       - name: Install crawler dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Validate webhook
         run: node --check api/telegram.js
       - name: Validate crawler
         run: node --check scripts/crawl/index.mjs
+      - name: Validate validators
+        run: node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs
       - name: Crawl official Telegram sources
         run: node scripts/crawl/index.mjs
       - name: Validate generated knowledge
-        run: node scripts/validate-knowledge.mjs
+        run: npm run validate
       - name: Commit changes
         run: |
           if git diff --quiet -- data/knowledge.json data/crawl-state.json; then
