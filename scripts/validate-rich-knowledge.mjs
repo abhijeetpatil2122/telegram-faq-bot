@@ -30,7 +30,7 @@ function validateHtml(html, id) {
   if ($('script,style,iframe,object,embed,form,input,button').length) throw new Error(`Unsafe HTML element in ${id}`);
   for (const link of $('a').toArray()) {
     const href = String($(link).attr('href') || '');
-    if (!/^(?:https|tg|mailto|tel):/i.test(href)) throw new Error(`Unsafe link in ${id}: ${href}`);
+    if (!/^(?:https?|tg|mailto|tel):/i.test(href)) throw new Error(`Unsafe link in ${id}: ${href}`);
   }
   return normalize($('div').text());
 }
