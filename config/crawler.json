@@ -1,0 +1,9 @@
+{
+  "maxAnswerChars": 28000,
+  "requestTimeoutMs": 30000,
+  "maxSourceBytes": 5000000,
+  "minItemsPerSource": 1,
+  "maxDropRatio": 0.55,
+  "userAgent": "telegram-help-desk-crawler/4.0 (+https://github.com/abhijeetpatil2122/telegram-faq-bot)",
+  "allowedProtocols": ["http:", "https:", "mailto:", "tel:", "tg:"]
+}

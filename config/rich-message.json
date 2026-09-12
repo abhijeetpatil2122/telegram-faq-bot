@@ -1,0 +1,5 @@
+{
+  "rendererVersion": 1,
+  "maxMessageChars": 32768,
+  "features": ["headings","lists","code","tables","blockquotes","details","links","urlButtons","sourceButtons"]
+}

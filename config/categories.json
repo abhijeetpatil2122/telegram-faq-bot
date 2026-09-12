@@ -1,0 +1,21 @@
+{
+  "USER_HELP":"General Telegram help and account questions",
+  "ACCOUNT":"Login, phone number, sessions and account access",
+  "SECURITY":"Spam, abuse, scams and account safety",
+  "PRIVACY":"Privacy, data and security controls",
+  "PREMIUM":"Telegram Premium and Premium features",
+  "CHANNELS":"Channels, subscribers, posts, boosts and discovery",
+  "GROUPS":"Groups, permissions, topics, admins and moderation",
+  "COMMUNITIES":"Communities and connected Telegram spaces",
+  "BUSINESS":"Telegram Business and business features",
+  "STARS":"Telegram Stars, paid messages and monetization",
+  "GIFTS":"Gifts, collectibles and gifting",
+  "MEDIA":"Photos, videos, files, GIFs and media features",
+  "CALLS":"Voice calls, video calls and group calls",
+  "STORIES":"Stories and story features",
+  "SEARCH":"Search and discovery",
+  "BOTS":"Bots, Mini Apps and bot platform behavior",
+  "SUPPORT":"Official Telegram support and reporting",
+  "LEGAL":"Terms, policies and restrictions",
+  "NEWS":"Feature announcements and product history"
+}

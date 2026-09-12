@@ -2,11 +2,11 @@ name: Update Telegram Knowledge
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - 'scripts/crawl-faq.mjs'
+      - 'scripts/crawl/**'
       - 'scripts/validate-knowledge.mjs'
+      - 'config/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/update-faq.yml'
@@ -23,33 +23,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
+          cache: npm
       - name: Install crawler dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-
       - name: Validate webhook
         run: node --check api/telegram.js
-
+      - name: Validate crawler
+        run: node --check scripts/crawl/index.mjs
       - name: Crawl official Telegram sources
-        run: node scripts/crawl-faq.mjs
-
+        run: node scripts/crawl/index.mjs
       - name: Validate generated knowledge
         run: node scripts/validate-knowledge.mjs
-
       - name: Commit changes
         run: |
-          if git diff --quiet -- data/knowledge.json; then
+          if git diff --quiet -- data/knowledge.json data/crawl-state.json; then
             echo 'No knowledge changes.'
             exit 0
           fi
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/knowledge.json
+          git add data/knowledge.json data/crawl-state.json
           git commit -m 'chore(data): update Telegram knowledge'
           git push
