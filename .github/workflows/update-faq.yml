@@ -40,6 +40,8 @@ jobs:
         run: npm run validate
       - name: Run search regression tests
         run: npm run search:test
+      - name: Run search benchmark
+        run: npm run search:benchmark
       - name: Commit changes
         run: |
           if git diff --quiet -- data/knowledge.json data/crawl-state.json; then
