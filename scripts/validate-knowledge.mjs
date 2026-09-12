@@ -27,8 +27,8 @@ for (const item of data.items) {
   const tags = [...item.answer_html.matchAll(/<\/?([A-Za-z0-9:-]+)/g)].map((match) => match[1].toLowerCase());
   for (const tag of tags) if (!allowedTags.has(tag)) throw new Error(`Unsupported Rich HTML tag <${tag}> in ${item.id}`);
   ids.add(item.id);
-  const normalized = `${item.source.id}::${item.title.toLowerCase().replace(/\s+/g, ' ').trim()}`;
-  if (questions.has(normalized)) throw new Error(`Duplicate title/question in source: ${item.title}`);
+  const normalized = `${item.source.id}::${item.section ?? ''}::${item.title.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+  if (questions.has(normalized)) throw new Error(`Duplicate title/question in source section: ${item.title}`);
   questions.add(normalized);
 }
 for (const source of data.sources) {
