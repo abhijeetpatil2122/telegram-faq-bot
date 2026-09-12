@@ -9,7 +9,6 @@ on:
       - 'scripts/validate-rich-knowledge.mjs'
       - 'config/**'
       - 'package.json'
-      - 'package-lock.json'
       - '.github/workflows/update-faq.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -29,7 +28,7 @@ jobs:
         with:
           node-version: 24
       - name: Install crawler dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Validate webhook
         run: node --check api/telegram.js
       - name: Validate crawler
