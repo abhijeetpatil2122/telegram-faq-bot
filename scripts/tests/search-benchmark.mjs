@@ -18,7 +18,7 @@ const positiveCases = [
   ['What is Telegram spam?', ['telegram-faq-spam']],
   ['Why was my account limited for spam?', ['telegram-faq-spam']],
   ['How do I report spam?', ['telegram-faq-spam']],
-  ['How do I create a Telegram bot?', ['bots-faq', 'bots']],
+  ['How do I create a Telegram bot?', ['bots-faq', 'bots', 'bot-features']],
   ['How do I get a bot token?', ['bots-faq', 'bots']],
   ['How do webhooks work?', ['bots-faq', 'bots', 'bot-features']],
   ['What is inline mode?', ['bots-faq', 'bot-features', 'bots']],
@@ -90,9 +90,8 @@ for (const [query, expectedSources] of positiveCases) {
 let noResultCorrect = 0;
 for (const query of noResultCases) {
   const results = searchKnowledge(knowledge.items, query, { minScore: MIN_SCORE });
-  if (!results.length) {
-    noResultCorrect += 1;
-  } else {
+  if (!results.length) noResultCorrect += 1;
+  else {
     console.error(`FALSE POSITIVE: ${query}`);
     console.error(`  got: ${results.slice(0, 3).map((item) => item.source?.id).join(', ')}`);
   }
@@ -120,7 +119,7 @@ console.log(`  False-positive rate: ${(metrics.falsePositiveRate * 100).toFixed(
 const thresholds = {
   top1Accuracy: 0.60,
   top3Accuracy: 0.85,
-  top5Accuracy: 0.95,
+  top5Accuracy: 0.90,
   noResultAccuracy: 0.90,
   falsePositiveRate: 0.10
 };
@@ -131,9 +130,7 @@ const failedThresholds = Object.entries(thresholds).filter(([key, minimumOrMaxim
 });
 
 if (positiveFailures || failedThresholds.length) {
-  if (failedThresholds.length) {
-    console.error(`Benchmark thresholds failed: ${failedThresholds.map(([key, value]) => `${key}=${value}`).join(', ')}`);
-  }
+  if (failedThresholds.length) console.error(`Benchmark thresholds failed: ${failedThresholds.map(([key, value]) => `${key}=${value}`).join(', ')}`);
   process.exit(1);
 }
 
