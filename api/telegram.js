@@ -80,34 +80,41 @@ function renderAnswerHtml(item) {
   return promoteExternalLinks(html);
 }
 
+function formatCategoryName(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\p{L}/gu, (char) => char.toUpperCase());
+}
+
 function sourceFooter(item) {
   const sourceTitle = item.source?.title ?? 'Official Telegram source';
   const sourceUrl = safeButtonUrl(item.source?.url);
-  return sourceUrl
-    ? `<footer>Source: <a href="${htmlEscape(sourceUrl)}">${htmlEscape(sourceTitle)}</a></footer>`
+  const button = sourceUrl ? richUrlButton(sourceTitle, sourceUrl, 'primary') : null;
+  return button
+    ? `<footer>Source: ${button}</footer>`
     : `<footer>Source: ${htmlEscape(sourceTitle)}</footer>`;
 }
 
 function niceDescription(item) {
   const source = item.source?.title ?? 'Official Telegram source';
   const section = item.section && item.section !== item.title ? ` • ${item.section}` : '';
-  const category = item.category ? ` • ${item.category}` : '';
+  const category = item.category ? ` • ${formatCategoryName(item.category)}` : '';
   return `${source}${section}${category} • Official documentation`.slice(0, 255);
 }
 
 function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
-  const category = item.category ? `<p><b>Category:</b> ${htmlEscape(item.category)}</p>` : '';
-  const sourceUrl = safeButtonUrl(item.source?.url);
-  const sourceTitle = item.source?.title ?? 'Official Telegram source';
-  const sourceButton = sourceUrl ? richUrlButton(`Open ${sourceTitle}`, sourceUrl, 'primary') : null;
+  const category = item.category
+    ? `<blockquote><b>Category:</b> ${htmlEscape(formatCategoryName(item.category))}</blockquote>`
+    : '';
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
     category,
-    `<details open><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
+    `<details><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
     '<hr/>',
-    sourceFooter(item),
-    sourceButton ? `<tg-button-row align="left">${sourceButton}</tg-button-row>` : ''
+    sourceFooter(item)
   ].filter(Boolean).join('\n');
 }
 
