@@ -12,6 +12,10 @@ const HELP_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/510c3a83-8a96
 const NO_RESULTS_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/6132b4a1-1e93-41a7-a76f-fa199577ad90';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
 
+// Cached getMe promise. Keep the promise itself so concurrent webhook requests
+// during a cold start share one Telegram API call instead of racing.
+let botProfilePromise = null;
+
 function paginate(items, offset) {
   const parsed = Number.parseInt(offset || '0', 10);
   const start = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
