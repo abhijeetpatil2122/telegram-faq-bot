@@ -1,141 +1,145 @@
-# Telegram FAQ Bot
+# Telegram Help Desk
 
-A serverless Telegram inline knowledge bot backed only by official Telegram documentation, FAQs, guides and terms.
+A serverless Telegram Help Desk backed by curated official Telegram sources. It searches a versioned knowledge dataset and returns deterministic Rich Messages with official source links.
 
-## ✨ Features
+## ✨ What it does
 
-- 🔎 Fast inline search with deterministic relevance ranking.
-- 📚 Answers sourced only from indexed official Telegram documentation.
-- 🧩 Rich Telegram messages with structured formatting and interactive buttons.
-- 🔗 Every answer includes a link back to its official source.
-- 🚫 No-result handling instead of hallucinating unsupported answers.
-- 🏓 `/ping` reports Telegram Bot API round-trip latency in milliseconds.
-- 🛠 `/start` and `/help` provide a structured command/help interface.
-- ⚡ Fully serverless — no VPS and no database required.
+- 🔎 Inline Help Desk search with deterministic ranking.
+- 📚 Official Telegram FAQ, security, Premium, channels, bot and terms coverage.
+- 🧩 Rich Messages with headings, lists, code, tables, quotes, details and links.
+- 🔗 Official source button on every answer.
+- 🚫 No hallucinated answers: unsupported questions return no official result.
+- ⚡ GitHub Actions refreshes knowledge every 6 hours.
+- ☁️ Vercel serverless runtime; no database or VPS required.
 
 ## 🏗 Architecture
 
 ```text
-Official Telegram documentation
+Official Telegram sources
         ↓
-GitHub Actions crawler
+config/sources.json
+        ↓
+scripts/crawl/index.mjs
+        ↓
+safety + extraction + normalization
         ↓
 data/knowledge.json
         ↓
-Vercel serverless webhook
+scripts/validate-knowledge.mjs
         ↓
-Telegram inline search + commands
+api/telegram.js
+        ↓
+deterministic search + Rich Messages
+        ↓
+Telegram Help Desk
 ```
 
-### Stack
+## 📚 Source policy
 
-- **Telegram Bot API** — webhook, inline mode and Rich Messages.
-- **Vercel** — serverless webhook/API runtime.
-- **GitHub Actions** — scheduled knowledge crawler.
-- **GitHub** — versioned generated knowledge dataset.
-- **Node.js** — crawler and serverless runtime.
-- **No database / No VPS** — the repository is the source of truth for indexed knowledge.
+The bot is source-bound. Official Telegram content is the authority; the bot does not use an LLM to invent answers.
 
-## 📚 Official source policy
-
-The bot is deliberately **source-bound**. It does not use an LLM to invent answers.
-
-### Indexed sources
+### Indexed user-help sources
 
 - Telegram FAQ
+- Telegram Spam FAQ
+- Telegram Premium FAQ
+- Telegram Channels FAQ
+
+### Indexed bot/developer-help sources
+
 - Bots FAQ
-- Bots: An introduction for developers
+- Bots introduction
 - Telegram Bot Features
-- Telegram Bot Platform Developer Terms
-- Terms of Service for Bots
+- Telegram Bot Developer Terms
+- Telegram Bot Terms
 
-The crawler extracts explicit FAQ questions and meaningful sections from the official guides and terms, preserving useful structure such as headings, lists, tables, quotes, links and other supported rich formatting.
+### Discovery-only sources
 
-### Bot API reference
+The Telegram Blog, Telegram Evolution and the full Bot API reference are tracked for coverage/discovery but are not blindly injected into general Help Desk search. The Bot API is especially technical and should not pollute user-help results.
 
-The full Bot API reference is intentionally **not indexed as general FAQ knowledge**. It is primarily a method/type/parameter reference for developers.
+MarshalX's `telegram-crawler` is used as a coverage/discovery reference, not as a raw dataset. Its large universe contains technical API and MTProto material that is intentionally outside this Help Desk's scope.
 
-The bot can link users to the official Bot API documentation, but unsupported API-reference questions are not fabricated from memory.
+## 🔍 Search
 
-## 🔍 Search behavior
-
-Search ranking considers question/title matches, phrases, prefixes, token coverage, aliases, keywords and sections. Results are deterministic so the same indexed knowledge produces stable search ordering.
-
-If the indexed official material does not sufficiently support a query, the bot returns a no-results response rather than making up an answer.
+The live search engine in `api/telegram.js` remains deterministic. It considers question/title matches, phrases, aliases, keywords, sections and token coverage. The upgraded knowledge schema adds category, audience, priority and provenance without replacing the existing search contract.
 
 ## 🤖 Commands
 
 | Command | Purpose |
 | --- | --- |
-| `/start` | Open the welcome screen and search controls. |
-| `/help` | Show available commands and inline-search guidance. |
-| `/ping` | Measure Telegram Bot API round-trip latency in milliseconds. |
+| `/start` | Open the Help Desk welcome screen. |
+| `/help` | Show help and search instructions. |
+| `/ping` | Measure Telegram API round-trip latency. |
 
-### Inline mode
-
-Use the bot from any chat with:
+Inline mode:
 
 ```text
-@YourBotUsername your question
+@YourBotUsername how do I enable passkeys?
 ```
-
-Ask short, specific questions for the best search results.
 
 ## 🔄 Knowledge updates
 
-GitHub Actions runs the crawler every 6 hours and can also be started manually.
+GitHub Actions runs the crawler every six hours and on manual dispatch.
 
-The update pipeline:
+The crawler:
 
-1. Fetches only the configured official Telegram sources.
-2. Extracts FAQ entries and meaningful guide/terms sections.
-3. Validates the generated knowledge schema and Rich HTML.
-4. Refuses to publish an empty source result.
-5. Produces deterministic JSON so timestamps do not create fake changes.
-6. Commits `data/knowledge.json` only when the knowledge content actually changes.
+1. Loads only enabled/indexed sources from configuration.
+2. Fetches them with bounded timeout and response size.
+3. Extracts FAQ questions and meaningful guide/terms sections.
+4. Sanitizes content into the supported Rich Message HTML subset.
+5. Refuses empty sources and catastrophic entry-count drops.
+6. Generates deterministic, sorted JSON.
+7. Validates the result before committing it.
 
-This keeps temporary source outages or parser regressions from silently wiping the knowledge base.
-
-## 📁 Repository structure
+## 📁 Structure
 
 ```text
-api/telegram.js                  # Vercel webhook, commands and search
-scripts/crawl-faq.mjs            # Official-source crawler/parser
-scripts/validate-knowledge.mjs   # Generated-data validator
-data/knowledge.json             # Generated indexed knowledge
-.github/workflows/update-faq.yml # Scheduled crawler workflow
-package.json                     # Node.js dependencies/scripts
+api/telegram.js
+config/
+  sources.json
+  categories.json
+  crawler.json
+  rich-message.json
+scripts/
+  crawl/index.mjs
+  crawl-faq.mjs              # legacy crawler retained during migration
+  validate-knowledge.mjs
+data/
+  knowledge.json
+  crawl-state.json
+scripts/...
+docs/
+  ARCHITECTURE.md
+  SOURCES.md
+  CRAWLER.md
+  KNOWLEDGE_SCHEMA.md
+  SEARCH.md
+  RICH_MESSAGES.md
+.github/workflows/update-faq.yml
 ```
 
-## 🔐 Deployment configuration
+## 🧪 Development
 
-Set these environment variables in Vercel:
-
-- `BOT_TOKEN` — Telegram bot token from @BotFather.
-- `TELEGRAM_WEBHOOK_SECRET` — a long random secret used to verify webhook requests.
-
-After deployment:
-
-1. Configure the Telegram webhook to the Vercel `/api/telegram` endpoint using the same secret token.
-2. Enable inline mode for the bot through @BotFather.
-3. Test `/start`, `/help`, `/ping`, and inline search.
-
-## 🧪 Local checks
+Requires Node.js 24.
 
 ```bash
-node --check api/telegram.js
-node scripts/crawl-faq.mjs
-node scripts/validate-knowledge.mjs
+npm install
+npm run check
+npm run crawl
+npm run validate
 ```
 
-The project uses Node.js 24 in GitHub Actions.
+`npm run crawl` rebuilds the generated knowledge from configured official sources.
+
+## 🔐 Vercel
+
+Required environment variables:
+
+- `BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+
+The existing Vercel webhook and Rich Message implementation remain the runtime foundation while the crawler and knowledge layer evolve.
 
 ## 📜 Scope
 
-This project is a Telegram documentation search/help bot, not a general-purpose AI assistant. Every answer is derived from the indexed official Telegram sources and exposes the corresponding source link.
-
-When official indexed material does not cover a question, the correct behavior is to return **no official answer** rather than hallucinate.
-
-## 📄 License
-
-See the repository license file for the project's licensing terms.
+This is a Telegram documentation Help Desk, not a general-purpose AI assistant. If official indexed material does not support a question, the correct result is **no official answer**.
