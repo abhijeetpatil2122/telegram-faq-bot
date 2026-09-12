@@ -8,6 +8,7 @@ const configDir = path.join(root, 'config');
 const dataDir = path.join(root, 'data');
 const sourcesConfig = JSON.parse(await fs.readFile(path.join(configDir, 'sources.json'), 'utf8'));
 const crawlerConfig = JSON.parse(await fs.readFile(path.join(configDir, 'crawler.json'), 'utf8'));
+const searchConfig = JSON.parse(await fs.readFile(path.join(configDir, 'search.json'), 'utf8'));
 const output = path.join(dataDir, 'knowledge.json');
 const stateOutput = path.join(dataDir, 'crawl-state.json');
 const STOPWORDS = new Set('a an and are as at be because been before but by can could did do does for from had has have how i if in into is it its me more most my no not of on or our please should so than that the their them there these they this to was we were what when where which who why will with you your telegram'.split(' '));
@@ -19,15 +20,25 @@ function cleanTitle(value = '') { return cleanText(value).replace(/^Q\s*:\s*/i, 
 function safeId(sourceId, title, section, index) { return `${sourceId}-${createHash('sha256').update(`${sourceId}\n${section || ''}\n${title}\n${index}`).digest('hex').slice(0, 20)}`; }
 function escapeHtml(value = '') { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;'); }
 function safeUrl(value, base) { const raw = String(value ?? '').trim(); if (!raw || /^(?:javascript|data|vbscript):/i.test(raw)) return null; try { const url = new URL(raw, base); return ALLOWED_PROTOCOLS.has(url.protocol) ? url.toString() : null; } catch { return null; } }
-function keywordsFor(title, answer, section = '') { return [...new Set(`${normalize(title)} ${normalize(section)} ${normalize(answer).slice(0, 7000)}`.split(' ').filter((x) => (x.length >= 3 || ['api','app','bot','bots','faq','otp','url','2fa','qr'].includes(x)) && !STOPWORDS.has(x)))].slice(0, 120); }
-function aliasesFor(title, section = '') {
+function keywordsFor(title, answer, section = '', category = '') {
+  return [...new Set(`${normalize(title)} ${normalize(section)} ${normalize(category)} ${normalize(answer).slice(0, 7000)}`.split(' ').filter((x) => (x.length >= 3 || ['api','app','bot','bots','faq','otp','url','2fa','qr','xtr'].includes(x)) && !STOPWORDS.has(x)))].slice(0, 140);
+}
+function aliasesFor(title, section = '', category = '') {
   const q = cleanTitle(title);
+  const haystack = normalize(`${q} ${section}`);
   const aliases = new Set([q]);
   if (/^how\s+/i.test(q)) aliases.add(q.replace(/^how\s+/i, '').replace(/\?$/, ''));
   if (/^what\s+is\s+/i.test(q)) aliases.add(q.replace(/^what\s+is\s+/i, '').replace(/\?$/, ''));
   if (/^what\s+are\s+/i.test(q)) aliases.add(q.replace(/^what\s+are\s+/i, '').replace(/\?$/, ''));
   if (section && normalize(section) !== normalize(q)) aliases.add(section);
-  return [...aliases].filter(Boolean).slice(0, 6);
+
+  for (const [canonical, variants] of Object.entries(searchConfig.phraseAliases || {})) {
+    if (!haystack.includes(normalize(canonical))) continue;
+    for (const variant of variants) aliases.add(variant);
+  }
+
+  for (const alias of searchConfig.categoryAliases?.[category] || []) aliases.add(alias);
+  return [...aliases].map(cleanText).filter(Boolean).slice(0, 20);
 }
 
 function serialize(node, $, sourceUrl, pre = false) {
@@ -87,7 +98,7 @@ function makeItem(source, heading, answerHtml, section, index) {
   const answer = plain(safeHtml);
   if (answer.length < 20) return null;
   const title = heading.text;
-  return { id: safeId(source.id, title, section, index), type: source.kind, category: source.category, title, question: title, section, aliases: aliasesFor(title, section), keywords: keywordsFor(title, answer, section), answer, answer_html: safeHtml, source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } };
+  return { id: safeId(source.id, title, section, index), type: source.kind, category: source.category, title, question: title, section, aliases: aliasesFor(title, section, source.category), keywords: keywordsFor(title, answer, section, source.category), answer, answer_html: safeHtml, source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } };
 }
 
 function extractFaq(nodes, $, source, questionMode = 'q') {

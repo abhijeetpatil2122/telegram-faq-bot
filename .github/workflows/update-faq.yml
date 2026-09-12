@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/crawl/**'
+      - 'scripts/tests/**'
       - 'scripts/validate-knowledge.mjs'
       - 'scripts/validate-rich-knowledge.mjs'
       - 'config/**'
@@ -31,14 +32,14 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Validate webhook
         run: node --check api/telegram.js
-      - name: Validate crawler
-        run: node --check scripts/crawl/index.mjs
-      - name: Validate validators
-        run: node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs
+      - name: Validate crawler and search tests
+        run: npm run check
       - name: Crawl official Telegram sources
         run: node scripts/crawl/index.mjs
       - name: Validate generated knowledge
         run: npm run validate
+      - name: Run search regression tests
+        run: npm run search:test
       - name: Commit changes
         run: |
           if git diff --quiet -- data/knowledge.json data/crawl-state.json; then

@@ -1,6 +1,6 @@
 {
   "name": "telegram-faq-bot",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {"node": "24.x"},
@@ -9,6 +9,7 @@
     "dev": "node --watch api/telegram.js",
     "crawl": "node scripts/crawl/index.mjs",
     "validate": "node scripts/validate-knowledge.mjs && node scripts/validate-rich-knowledge.mjs",
-    "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs"
+    "search:test": "node scripts/tests/search.mjs",
+    "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs"
   }
 }
