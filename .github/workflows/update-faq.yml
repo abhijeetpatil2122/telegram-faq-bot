@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/crawl/**'
       - 'scripts/tests/**'
+      - 'scripts/search-engine.mjs'
       - 'scripts/validate-knowledge.mjs'
       - 'scripts/validate-rich-knowledge.mjs'
       - 'config/**'
