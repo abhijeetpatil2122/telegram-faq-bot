@@ -9,7 +9,7 @@ const categories = JSON.parse(await fs.readFile(path.join(root, 'config', 'categ
 const configured = new Map(config.sources.filter((s) => s.enabled).map((s) => [s.id, s]));
 const allowedKinds = new Set(['faq', 'guide', 'terms', 'discovery', 'developer-reference']);
 const allowedAudiences = new Set(['user', 'developer']);
-const allowedTags = new Set(['a','b','strong','i','em','u','ins','s','strike','del','code','mark','sub','sup','tg-spoiler','tg-reference','tg-emoji','tg-time','tg-math','h1','h2','h3','h4','h5','h6','p','footer','hr','ul','ol','li','blockquote','aside','figure','figcaption','cite','table','caption','tr','th','td','details','summary']);
+const allowedTags = new Set(['a','b','strong','i','em','u','ins','s','strike','del','code','mark','sub','sup','tg-spoiler','tg-reference','tg-emoji','tg-time','tg-math','h1','h2','h3','h4','h5','h6','p','pre','footer','hr','ul','ol','li','blockquote','aside','figure','figcaption','cite','table','caption','tr','th','td','details','summary']);
 const voidTags = new Set(['hr']);
 const ids = new Set();
 const questions = new Set();
