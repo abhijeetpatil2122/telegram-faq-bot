@@ -9,7 +9,6 @@
     "dev": "node --watch api/telegram.js",
     "crawl": "node scripts/crawl/index.mjs",
     "validate": "node scripts/validate-knowledge.mjs",
-    "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs",
-    "build": "npm run crawl && npm run validate"
+    "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/crawl-faq.mjs && node --check scripts/validate-knowledge.mjs"
   }
 }
