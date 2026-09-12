@@ -47,7 +47,6 @@ function serialize(node, $, sourceUrl, pre = false) {
 function renderNodes(nodes, $, sourceUrl) { return nodes.map((n) => serialize(n, $, sourceUrl)).join('\n').replace(/\n{3,}/g, '\n\n').trim(); }
 function plain(html) { const $ = cheerio.load(`<div>${html}</div>`, { decodeEntities: true }, false); return cleanText($('div').text()); }
 
-// Truncate by DOM text rather than slicing raw HTML, so tags can never be cut in half.
 function truncateHtml(html, maxChars) {
   if (html.length <= maxChars) return html;
   const $ = cheerio.load(`<div id="__root">${html}</div>`, { decodeEntities: true }, false);
@@ -109,17 +108,18 @@ function extractFaq(nodes, $, source) {
   nodes.forEach((n, index) => {
     if (/^h[1-6]$/i.test(n.name)) {
       const raw = cleanText($(n).text());
-      if (/^Q\s*:/i.test(raw)) headings.push({ index, level: Number(n.name.slice(1)), raw, text: cleanTitle(raw) });
+      headings.push({ index, level: Number(n.name.slice(1)), raw, text: cleanTitle(raw), isQuestion: /^Q\s*:/i.test(raw) });
     }
   });
+  const questions = headings.filter((heading) => heading.isQuestion);
   const items = [];
-  for (let h = 0; h < headings.length; h += 1) {
-    const heading = headings[h];
+  for (let h = 0; h < questions.length; h += 1) {
+    const heading = questions[h];
     let end = nodes.length;
-    for (let j = h + 1; j < headings.length; j += 1) { if (headings[j].index > heading.index) { end = headings[j].index; break; } }
+    for (const next of headings) if (next.index > heading.index && next.level <= heading.level) { end = next.index; break; }
     const answerHtml = renderNodes(nodes.slice(heading.index + 1, end), $, source.url);
     let section = null;
-    for (let j = h - 1; j >= 0; j -= 1) if (headings[j].level < heading.level) { section = headings[j].text; break; }
+    for (let j = headings.indexOf(heading) - 1; j >= 0; j -= 1) if (headings[j].level < heading.level && !headings[j].isQuestion) { section = headings[j].text; break; }
     const item = makeItem(source, heading, answerHtml, section, h);
     if (item) items.push(item);
   }
@@ -148,7 +148,6 @@ function extract(html, source) {
   const { $, root } = loadDoc(html);
   const nodes = contentNodes(root);
   if (source.kind === 'faq') return extractFaq(nodes, $, source);
-  if (source.kind === 'terms' || source.kind === 'guide') return extractSections(nodes, $, source);
   return extractSections(nodes, $, source);
 }
 
