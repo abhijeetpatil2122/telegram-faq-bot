@@ -1,8 +1,45 @@
 {
   "schemaVersion": 1,
-  "generatedAt": null,
-  "status": "bootstrap",
-  "sources": {},
-  "totalItems": 0,
-  "totalSources": 0
+  "generatedAt": "2026-09-12T07:06:06.480Z",
+  "status": "success",
+  "sources": {
+    "telegram-faq": {
+      "items": 121,
+      "hash": "bc9d6a1a72df1ea90137a1b9a2bf674a7846392bc7b51d4e12d73bf6e3be6e9a"
+    },
+    "telegram-faq-spam": {
+      "items": 11,
+      "hash": "6964fc2361f208410c66b8e75ee0e513b1d5306f2c6377ea8b22094f326f920e"
+    },
+    "telegram-faq-premium": {
+      "items": 74,
+      "hash": "6ab1189b10599c8c6ae67d049ca7087d4321f855f46b6cde2b6f143a5383bf36"
+    },
+    "telegram-faq-channels": {
+      "items": 11,
+      "hash": "b3242bdb394b669ff7e3ff6bed6c12a219e741bacb4cfd4b5e87e93c09c23259"
+    },
+    "bots-faq": {
+      "items": 23,
+      "hash": "79851fcc5ae3c11743cc48480f1dd5a6fbc7abeb619d13310421707a837710f1"
+    },
+    "bots": {
+      "items": 20,
+      "hash": "40610b8159bbcc3003e3e5f76980ac15e473a980a57d71d571ff3d15266dd624"
+    },
+    "bot-features": {
+      "items": 86,
+      "hash": "20aef70356174da5d19c9b050975077e089c7fec9ca3ae557100bec2dc25bfe1"
+    },
+    "bot-developer-terms": {
+      "items": 58,
+      "hash": "4747fd1e812b203a57fa777bfa1ea5a4cc1c614374fe7f998d7a45980aae1207"
+    },
+    "bot-terms": {
+      "items": 19,
+      "hash": "fcff6d690ae72f109506e8ffbd9225238f2d643e1cadb5ef1cc7a90da506582f"
+    }
+  },
+  "totalItems": 423,
+  "totalSources": 9
 }
