@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { searchKnowledge as retrieveKnowledge } from '../scripts/search-engine.mjs';
 
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
 const MAX_RESULTS = 50;
@@ -10,115 +11,6 @@ const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a
 const HELP_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/510c3a83-8a96-416c-b1ea-a37dddb6638f';
 const NO_RESULTS_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/6132b4a1-1e93-41a7-a76f-fa199577ad90';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
-
-const SEARCH_STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do', 'does', 'for', 'from',
-  'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or', 'please', 'tell', 'that', 'the',
-  'this', 'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with', 'you', 'your'
-]);
-
-function loadKnowledge() {
-  try {
-    const data = JSON.parse(fs.readFileSync(KNOWLEDGE_PATH, 'utf8'));
-    return Array.isArray(data.items) ? data.items : [];
-  } catch (error) {
-    console.error('Unable to load knowledge dataset:', error);
-    return [];
-  }
-}
-
-const KNOWLEDGE = loadKnowledge();
-let botProfilePromise;
-
-function normalize(value = '') {
-  return String(value).toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function queryTokens(query) {
-  return [...new Set(normalize(query).split(' ').filter((token) => token.length >= 2 && !SEARCH_STOPWORDS.has(token)))];
-}
-
-function tokenize(value) {
-  return new Set(normalize(value).split(' ').filter(Boolean));
-}
-
-function searchableFields(item) {
-  return {
-    question: normalize(item.question ?? ''),
-    title: normalize(item.title ?? ''),
-    section: normalize(item.section ?? ''),
-    aliases: (item.aliases ?? []).map(normalize).filter(Boolean),
-    keywords: (item.keywords ?? []).map(normalize).filter(Boolean)
-  };
-}
-
-function containsWholePhrase(field, query) {
-  return Boolean(field && query && (` ${field} `).includes(` ${query} `));
-}
-
-function tokenCoverage(tokens, field) {
-  if (!tokens.length || !field) return 0;
-  const fieldTokens = tokenize(field);
-  return tokens.filter((token) => fieldTokens.has(token)).length;
-}
-
-function score(item, query) {
-  const normalizedQuery = normalize(query);
-  const tokens = queryTokens(query);
-  if (!normalizedQuery || !tokens.length) return 0;
-
-  const fields = searchableFields(item);
-  const allFields = [fields.question, fields.title, fields.section, ...fields.aliases, ...fields.keywords].filter(Boolean);
-  const primary = fields.question || fields.title;
-  const primaryTokens = tokenize(primary);
-  const uniqueTokenCount = tokens.length;
-  const matchedPrimary = tokenCoverage(tokens, primary);
-  const matchedTitle = tokenCoverage(tokens, fields.title);
-  const matchedSection = tokenCoverage(tokens, fields.section);
-  const matchedAliases = tokenCoverage(tokens, fields.aliases.join(' '));
-  const matchedKeywords = tokenCoverage(tokens, fields.keywords.join(' '));
-  let points = 0;
-
-  if (fields.question === normalizedQuery) points += 1000;
-  if (fields.title === normalizedQuery) points += 900;
-  if (fields.section === normalizedQuery) points += 700;
-  if (containsWholePhrase(fields.question, normalizedQuery)) points += 420;
-  if (containsWholePhrase(fields.title, normalizedQuery)) points += 360;
-  if (containsWholePhrase(fields.section, normalizedQuery)) points += 220;
-  if (fields.aliases.some((field) => containsWholePhrase(field, normalizedQuery))) points += 300;
-  if (fields.keywords.some((field) => containsWholePhrase(field, normalizedQuery))) points += 180;
-  if (fields.question.startsWith(normalizedQuery)) points += 260;
-  else if (fields.title.startsWith(normalizedQuery)) points += 220;
-  else if (fields.section.startsWith(normalizedQuery)) points += 140;
-  if (fields.question.includes(normalizedQuery)) points += 140;
-  if (fields.title.includes(normalizedQuery)) points += 120;
-  if (fields.section.includes(normalizedQuery)) points += 80;
-
-  points += matchedPrimary * 90;
-  points += matchedTitle * 65;
-  points += matchedSection * 35;
-  points += matchedAliases * 45;
-  points += matchedKeywords * 20;
-
-  if (matchedPrimary === uniqueTokenCount) points += 260;
-  else if (matchedPrimary >= Math.max(1, uniqueTokenCount - 1)) points += 100;
-
-  const matchedAny = tokens.filter((token) => allFields.some((field) => tokenize(field).has(token))).length;
-  if (matchedAny === uniqueTokenCount) points += 120;
-  else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
-
-  if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
-  return points;
-}
-
-function searchKnowledge(query) {
-  if (!normalize(query)) return KNOWLEDGE.slice();
-  return KNOWLEDGE
-    .map((item) => ({ item, score: score(item, query) }))
-    .filter(({ score: itemScore }) => itemScore >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score || (a.item.question ?? a.item.title ?? '').localeCompare(b.item.question ?? b.item.title ?? ''))
-    .map(({ item }) => item);
-}
 
 function paginate(items, offset) {
   const parsed = Number.parseInt(offset || '0', 10);
@@ -157,11 +49,16 @@ function richUrlButton(label, href, style = 'primary') {
 }
 
 function promoteExternalLinks(html) {
-  return String(html ?? '').replace(/<a\b([^>]*?)\bhref=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi, (match, before, href, after, labelHtml) => {
-    const label = String(labelHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const button = richUrlButton(label, href, 'primary');
-    return button ?? match;
-  });
+  const sourceHtml = String(html ?? '');
+  const tableParts = sourceHtml.split(/(<table\b[\s\S]*?<\/table>)/gi);
+  return tableParts.map((part) => {
+    if (/^<table\b/i.test(part)) return part;
+    return part.replace(/<a\b([^>]*?)\bhref=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi, (match, before, href, after, labelHtml) => {
+      const label = String(labelHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const button = richUrlButton(label, href, 'primary');
+      return button ?? match;
+    });
+  }).join('');
 }
 
 function renderAnswerHtml(item) {
@@ -173,26 +70,32 @@ function renderAnswerHtml(item) {
 function sourceFooter(item) {
   const sourceTitle = item.source?.title ?? 'Official Telegram source';
   const sourceUrl = safeButtonUrl(item.source?.url);
-  const button = sourceUrl
-    ? `<tg-button type="url" style="primary" url="${htmlEscape(sourceUrl)}">${htmlEscape(sourceTitle)}</tg-button>`
-    : null;
-  return `<footer>Source:${button ? ` ${button}` : ` ${htmlEscape(sourceTitle)}`}</footer>`;
+  return sourceUrl
+    ? `<footer>Source: <a href="${htmlEscape(sourceUrl)}">${htmlEscape(sourceTitle)}</a></footer>`
+    : `<footer>Source: ${htmlEscape(sourceTitle)}</footer>`;
 }
 
 function niceDescription(item) {
   const source = item.source?.title ?? 'Official Telegram source';
   const section = item.section && item.section !== item.title ? ` • ${item.section}` : '';
-  return `${source}${section} • Official documentation`.slice(0, 255);
+  const category = item.category ? ` • ${item.category}` : '';
+  return `${source}${section}${category} • Official documentation`.slice(0, 255);
 }
 
 function renderRichAnswer(item) {
   const title = item.question ?? item.title ?? 'Telegram documentation';
+  const category = item.category ? `<p><b>Category:</b> ${htmlEscape(item.category)}</p>` : '';
+  const sourceUrl = safeButtonUrl(item.source?.url);
+  const sourceTitle = item.source?.title ?? 'Official Telegram source';
+  const sourceButton = sourceUrl ? richUrlButton(`Open ${sourceTitle}`, sourceUrl, 'primary') : null;
   return [
     `<h2>❓ ${htmlEscape(title)}</h2>`,
-    `<details><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
+    category,
+    `<details open><summary>Answer</summary>${renderAnswerHtml(item)}</details>`,
     '<hr/>',
-    sourceFooter(item)
-  ].join('\n');
+    sourceFooter(item),
+    sourceButton ? `<tg-button-row align="left">${sourceButton}</tg-button-row>` : ''
+  ].filter(Boolean).join('\n');
 }
 
 function noResultsContent(query) {
@@ -225,7 +128,7 @@ function noResultsHelpArticle(query) {
 }
 
 function inlineResults(query, offset) {
-  const allMatches = searchKnowledge(query);
+  const allMatches = retrieveKnowledge(KNOWLEDGE, query, { minScore: MIN_SCORE });
   if (!allMatches.length) {
     if (offset) return { results: [], next_offset: '' };
     return {
