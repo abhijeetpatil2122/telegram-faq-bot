@@ -19,7 +19,7 @@ const positiveCases = [
   ['Why was my account limited for spam?', ['telegram-faq-spam']],
   ['How do I report spam?', ['telegram-faq-spam']],
   ['How do I create a Telegram bot?', ['bots-faq', 'bots', 'bot-features']],
-  ['How do I get a bot token?', ['bots-faq', 'bots']],
+  ['How do I get a bot token?', ['bots-faq', 'bots', 'bot-features']],
   ['How do webhooks work?', ['bots-faq', 'bots', 'bot-features']],
   ['What is inline mode?', ['bots-faq', 'bot-features', 'bots']],
   ['How do inline queries work?', ['bot-features', 'bots-faq', 'bots']],
