@@ -1,6 +1,7 @@
 name: Update Telegram Knowledge
 
 # Search benchmark and knowledge validation are part of every knowledge update.
+# Benchmark coherence guardrail updated after the latest search-engine tuning.
 
 on:
   push:
