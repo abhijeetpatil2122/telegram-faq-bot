@@ -87,29 +87,16 @@ function makeItem(source, heading, answerHtml, section, index) {
   const answer = plain(safeHtml);
   if (answer.length < 20) return null;
   const title = heading.text;
-  return {
-    id: safeId(source.id, title, section, index),
-    type: source.kind,
-    category: source.category,
-    title,
-    question: title,
-    section,
-    aliases: aliasesFor(title, section),
-    keywords: keywordsFor(title, answer, section),
-    answer,
-    answer_html: safeHtml,
-    source: { id: source.id, title: source.title, url: source.url },
-    metadata: { official: true, audience: source.audience, priority: source.priority }
-  };
+  return { id: safeId(source.id, title, section, index), type: source.kind, category: source.category, title, question: title, section, aliases: aliasesFor(title, section), keywords: keywordsFor(title, answer, section), answer, answer_html: safeHtml, source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } };
 }
 
-function extractFaq(nodes, $, source) {
+function extractFaq(nodes, $, source, questionMode = 'q') {
   const headings = [];
   nodes.forEach((n, index) => {
-    if (/^h[1-6]$/i.test(n.name)) {
-      const raw = cleanText($(n).text());
-      headings.push({ index, level: Number(n.name.slice(1)), raw, text: cleanTitle(raw), isQuestion: /^Q\s*:/i.test(raw) });
-    }
+    if (!/^h[1-6]$/i.test(n.name)) return;
+    const raw = cleanText($(n).text());
+    const isQuestion = questionMode === 'q' ? /^Q\s*:/i.test(raw) : /\?$/.test(raw) || /^(how|what|why|where|when|who|which|can|could|should|is|are|do|does|did|will|may|i\s+can't|i\s+cannot)\b/i.test(raw);
+    headings.push({ index, level: Number(n.name.slice(1)), raw, text: cleanTitle(raw), isQuestion });
   });
   const questions = headings.filter((heading) => heading.isQuestion);
   const items = [];
@@ -119,7 +106,8 @@ function extractFaq(nodes, $, source) {
     for (const next of headings) if (next.index > heading.index && next.level <= heading.level) { end = next.index; break; }
     const answerHtml = renderNodes(nodes.slice(heading.index + 1, end), $, source.url);
     let section = null;
-    for (let j = headings.indexOf(heading) - 1; j >= 0; j -= 1) if (headings[j].level < heading.level && !headings[j].isQuestion) { section = headings[j].text; break; }
+    const position = headings.indexOf(heading);
+    for (let j = position - 1; j >= 0; j -= 1) if (headings[j].level < heading.level && !headings[j].isQuestion) { section = headings[j].text; break; }
     const item = makeItem(source, heading, answerHtml, section, h);
     if (item) items.push(item);
   }
@@ -147,7 +135,8 @@ function extractSections(nodes, $, source) {
 function extract(html, source) {
   const { $, root } = loadDoc(html);
   const nodes = contentNodes(root);
-  if (source.kind === 'faq') return extractFaq(nodes, $, source);
+  if (source.extractor === 'faq-q') return extractFaq(nodes, $, source, 'q');
+  if (source.extractor === 'faq-heading') return extractFaq(nodes, $, source, 'heading');
   return extractSections(nodes, $, source);
 }
 
