@@ -12,36 +12,25 @@ const STOPWORDS = new Set([
   'there', 'these', 'they', 'this', 'to', 'was', 'we', 'were', 'what', 'when', 'where',
   'which', 'who', 'why', 'will', 'with', 'you', 'your', 'tell'
 ]);
-
-const DEV_INTENT = new Set([
-  'api', 'bot', 'bots', 'token', 'webhook', 'inline', 'query', 'mini', 'app', 'apps',
-  'developer', 'developers', 'code', 'coding', 'payload', 'json', 'callback'
-]);
-
+const DEV_INTENT = new Set(['api', 'bot', 'bots', 'token', 'webhook', 'inline', 'query', 'mini', 'app', 'apps', 'developer', 'developers', 'code', 'coding', 'payload', 'json', 'callback']);
 function normalize(value = '') { return String(value).toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
 function tokens(value) { return [...new Set(normalize(value).split(' ').filter(Boolean))]; }
 function queryTokens(query) { return tokens(query).filter((token) => token.length >= 2 && !STOPWORDS.has(token)); }
 function tokenSet(value) { return new Set(tokens(value)); }
 function phrasePresent(field, phrase) { return Boolean(field && phrase && (` ${field} `).includes(` ${phrase} `)); }
-function coverage(queryTokensList, field) {
-  if (!queryTokensList.length || !field) return 0;
-  const fieldTokens = tokenSet(field); return queryTokensList.filter((token) => fieldTokens.has(token)).length;
-}
-function replacePhrase(text, from, to) {
-  if (!text || !from || !to || text === from) return text;
-  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return text.replace(new RegExp(`(^|\\s)${escaped}(?=\\s|$)`, 'g'), `$1${to}`);
-}
+function coverage(queryTokensList, field) { if (!queryTokensList.length || !field) return 0; const fieldTokens = tokenSet(field); return queryTokensList.filter((token) => fieldTokens.has(token)).length; }
+function replacePhrase(text, from, to) { if (!text || !from || !to || text === from) return text; const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return text.replace(new RegExp(`(^|\\s)${escaped}(?=\\s|$)`, 'g'), `$1${to}`); }
 function expandQuery(query) {
   const normalized = normalize(query); const variants = new Set([normalized]);
   for (const [canonical, aliases] of Object.entries(SEARCH_CONFIG.phraseAliases ?? {})) {
     const normalizedCanonical = normalize(canonical); const normalizedAliases = (aliases ?? []).map(normalize).filter(Boolean);
-    const matched = phrasePresent(normalized, normalizedCanonical) || normalizedAliases.some((alias) => phrasePresent(normalized, alias)); if (!matched) continue;
+    if (!phrasePresent(normalized, normalizedCanonical) && !normalizedAliases.some((alias) => phrasePresent(normalized, alias))) continue;
     variants.add(normalizedCanonical);
     for (const alias of normalizedAliases) { variants.add(alias); variants.add(replacePhrase(normalized, alias, normalizedCanonical)); variants.add(replacePhrase(normalized, normalizedCanonical, alias)); }
   }
   for (const [canonical, aliases] of Object.entries(SEARCH_CONFIG.termAliases ?? {})) {
     const normalizedCanonical = normalize(canonical); const normalizedAliases = (aliases ?? []).map(normalize).filter(Boolean);
-    const matched = phrasePresent(normalized, normalizedCanonical) || normalizedAliases.some((alias) => phrasePresent(normalized, alias)); if (!matched) continue;
+    if (!phrasePresent(normalized, normalizedCanonical) && !normalizedAliases.some((alias) => phrasePresent(normalized, alias))) continue;
     variants.add(normalizedCanonical);
     for (const alias of normalizedAliases) { variants.add(alias); variants.add(replacePhrase(normalized, alias, normalizedCanonical)); variants.add(replacePhrase(normalized, normalizedCanonical, alias)); }
   }
@@ -57,9 +46,7 @@ function detectIntents(query) {
   for (const [intent, patterns] of Object.entries(SEARCH_CONFIG.intentPatterns ?? {})) if ((patterns ?? []).map(normalize).some((pattern) => phrasePresent(normalized, pattern))) detected.add(intent);
   return detected;
 }
-function fieldsFor(item) {
-  return { question: normalize(item.question ?? ''), title: normalize(item.title ?? ''), section: normalize(item.section ?? ''), sourceTitle: normalize(item.source?.title ?? ''), aliases: (item.aliases ?? []).map(normalize).filter(Boolean), keywords: (item.keywords ?? []).map(normalize).filter(Boolean), category: normalize(item.category ?? ''), audience: normalize(item.metadata?.audience ?? '') };
-}
+function fieldsFor(item) { return { question: normalize(item.question ?? ''), title: normalize(item.title ?? ''), section: normalize(item.section ?? ''), sourceTitle: normalize(item.source?.title ?? ''), aliases: (item.aliases ?? []).map(normalize).filter(Boolean), keywords: (item.keywords ?? []).map(normalize).filter(Boolean), category: normalize(item.category ?? ''), audience: normalize(item.metadata?.audience ?? '') }; }
 function sourcePriority(item) { const priority = Number(item.metadata?.priority ?? 0); return Number.isFinite(priority) ? Math.max(0, Math.min(priority, 100)) : 0; }
 function editDistance(a, b) {
   if (a === b) return 0; if (!a) return b.length; if (!b) return a.length; if (Math.abs(a.length - b.length) > 2) return 3;
@@ -69,11 +56,9 @@ function editDistance(a, b) {
 }
 function fuzzySimilarity(a, b) { if (a === b || a.length < 5 || b.length < 5) return 0; if (Math.abs(a.length - b.length) > 2) return 0; const distance = editDistance(a, b); if (distance > 2) return 0; return 1 - (distance / Math.max(a.length, b.length)); }
 function fuzzyMatchScore(queryTokenList, fields) {
-  const exactTokens = new Set(); for (const field of fields) for (const token of tokens(field)) exactTokens.add(token);
   const fieldTokenLists = fields.map((field) => tokens(field)); let primaryScore = 0; let matched = 0;
   for (const queryToken of queryTokenList) {
-    if (exactTokens.has(queryToken)) continue; let best = 0;
-    for (const fieldToken of fieldTokenLists[0]) { const similarity = fuzzySimilarity(queryToken, fieldToken); if (similarity > best) best = similarity; }
+    let best = 0; for (const fieldToken of fieldTokenLists[0]) { const similarity = fuzzySimilarity(queryToken, fieldToken); if (similarity > best) best = similarity; }
     if (best >= 0.84) { matched += 1; primaryScore += best; }
   }
   return { matched, primaryScore };
@@ -102,19 +87,21 @@ function score(item, query) {
   if (matchedPrimary === uniqueTokenCount) points += 260; else if (matchedPrimary >= Math.max(1, uniqueTokenCount - 1)) points += 100;
   const matchedAny = baseTokens.filter((token) => allSearchFields.some((field) => tokenSet(field).has(token))).length;
   if (matchedAny === uniqueTokenCount) points += 120; else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
+  const fieldCoverages = [fields.question, fields.title, fields.section, fields.sourceTitle, ...fields.aliases, ...fields.keywords].map((field) => coverage(baseTokens, field));
+  const bestFieldCoverage = Math.max(0, ...fieldCoverages);
+  if (uniqueTokenCount >= 3 && bestFieldCoverage < 2) points -= 70;
   const fuzzy = fuzzyMatchScore(baseTokens, [primary]); if (matchedAny > 0 || baseTokens.length === 1) { points += Math.round(fuzzy.primaryScore * 95); if (fuzzy.matched === uniqueTokenCount && fuzzy.matched > 0) points += 90; }
   if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
-  if (detectedCategories.has(String(item.category ?? '').toUpperCase())) points += 150;
-  if (detectedCategories.has(String(item.category ?? '').toUpperCase()) && matchedSourceTitle > 0) points += 250;
+  const categoryMatch = detectedCategories.has(String(item.category ?? '').toUpperCase());
+  if (categoryMatch) points += 150;
+  if (categoryMatch && matchedSourceTitle > 0) points += 400;
+  if (item.type === 'faq' && detectedIntents.size && fields.audience === 'developer') points += 35;
   const developerIntent = baseTokens.some((token) => DEV_INTENT.has(token)) || detectedIntents.has('developer');
   if (developerIntent && fields.audience === 'developer') points += 55; if (!developerIntent && fields.audience === 'developer') points -= 8;
   points += intentScore(detectedIntents, fields); points += Math.round(sourcePriority(item) * 0.35); return points;
 }
 function containsPhraseAny(field, variants) { return variants.some((variant) => phrasePresent(field, variant)); }
-function effectiveMinScore(query, configured) {
-  const base = Number.isFinite(Number(configured)) ? Number(configured) : 24; const count = queryTokens(query).length;
-  if (count <= 1) return Math.max(18, base - 6); if (count === 2) return Math.max(20, base - 3); if (count >= 4) return base + 8; return base;
-}
+function effectiveMinScore(query, configured) { const base = Number.isFinite(Number(configured)) ? Number(configured) : 24; const count = queryTokens(query).length; if (count <= 1) return Math.max(18, base - 6); if (count === 2) return Math.max(20, base - 3); if (count >= 4) return base + 8; return base; }
 function diversifyScoredResults(scored, limit = 20) {
   if (scored.length <= 1) return scored; const remaining = [...scored]; const selected = []; const sourceCounts = new Map(); const categoryCounts = new Map();
   while (remaining.length && selected.length < Math.min(limit, scored.length)) {
