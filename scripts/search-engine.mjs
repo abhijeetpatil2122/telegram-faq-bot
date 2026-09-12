@@ -109,16 +109,16 @@ function fuzzySimilarity(a, b) {
 }
 function fuzzyMatchScore(queryTokenList, fields) {
   const exactTokens = new Set(); for (const field of fields) for (const token of tokens(field)) exactTokens.add(token);
-  const fieldTokenLists = fields.map((field) => tokens(field)); let primaryScore = 0; let anyScore = 0; let matched = 0;
+  const fieldTokenLists = fields.map((field) => tokens(field)); let primaryScore = 0; let matched = 0;
   for (const queryToken of queryTokenList) {
     if (exactTokens.has(queryToken)) continue;
     let best = 0; let bestField = -1;
     for (let fieldIndex = 0; fieldIndex < fieldTokenLists.length; fieldIndex += 1) for (const fieldToken of fieldTokenLists[fieldIndex]) {
       const similarity = fuzzySimilarity(queryToken, fieldToken); if (similarity > best) { best = similarity; bestField = fieldIndex; }
     }
-    if (best >= 0.84) { matched += 1; anyScore += best; if (bestField === 0) primaryScore += best; }
+    if (best >= 0.84) { matched += 1; if (bestField === 0) primaryScore += best; }
   }
-  return { matched, primaryScore, anyScore };
+  return { matched, primaryScore };
 }
 function intentScore(intents, fields) {
   if (!intents.size) return 0; const primary = fields.question || fields.title; let points = 0;
@@ -146,13 +146,10 @@ function score(item, query) {
   if (matchedPrimary === uniqueTokenCount) points += 260; else if (matchedPrimary >= Math.max(1, uniqueTokenCount - 1)) points += 100;
   const matchedAny = baseTokens.filter((token) => allSearchFields.some((field) => tokenSet(field).has(token))).length;
   if (matchedAny === uniqueTokenCount) points += 120; else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
-  const fuzzy = fuzzyMatchScore(baseTokens, [primary, fields.title, fields.section, fields.sourceTitle, ...fields.aliases, ...fields.keywords]);
-  // For multi-word queries, fuzzy matches need at least one exact anchor word.
-  // This prevents unrelated phrases such as "neutron star gardening schedule"
-  // from becoming matches merely because several words are edit-distance-close.
+  const fuzzy = fuzzyMatchScore(baseTokens, [primary]);
   if (matchedAny > 0 || baseTokens.length === 1) {
-    points += Math.round(fuzzy.primaryScore * 85) + Math.round(fuzzy.anyScore * 18);
-    if (fuzzy.matched === uniqueTokenCount && fuzzy.matched > 0) points += 80;
+    points += Math.round(fuzzy.primaryScore * 95);
+    if (fuzzy.matched === uniqueTokenCount && fuzzy.matched > 0) points += 90;
   }
   if (primaryTokens.size && matchedPrimary === primaryTokens.size && primaryTokens.size <= uniqueTokenCount) points += 45;
   if (detectedCategories.has(String(item.category ?? '').toUpperCase())) points += 150;
