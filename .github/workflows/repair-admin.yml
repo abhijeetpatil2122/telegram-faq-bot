@@ -1,0 +1,40 @@
+name: Repair Admin Runtime Patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-admin.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Repair patch script
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/update-faq.yml')
+          s = p.read_text()
+          marker = "          p.write_text(s)\n"
+          repair = "          s = s.replace(\"] .join('\\n');\", \"].join(' ');\")\n".replace('] .', '].')
+          if marker not in s:
+              raise SystemExit('workflow repair marker not found')
+          if "s = s.replace(\"] .join('\\n');\"" not in s and "s = s.replace(\"].join('\\n');\"" not in s:
+              s = s.replace(marker, repair + marker, 1)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/repair-admin.yml
+      - name: Commit repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/update-faq.yml .github/workflows/repair-admin.yml
+          git commit -m 'fix(ci): repair admin runtime patch'
+          git push
