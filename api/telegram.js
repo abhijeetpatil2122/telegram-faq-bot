@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { searchKnowledge as retrieveKnowledge } from '../scripts/search-engine.mjs';
 
 const KNOWLEDGE_PATH = path.join(process.cwd(), 'data', 'knowledge.json');
+const CRAWL_STATE_PATH = path.join(process.cwd(), 'data', 'crawl-state.json');
 const MAX_RESULTS = 50;
 const MIN_SCORE = 24;
 const INLINE_CACHE_TIME = 0;
@@ -20,6 +21,12 @@ const MAX_TRACKED_UPDATES = 5000;
 const PROCESSED_UPDATE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_RICH_MESSAGE_BYTES = 32768;
 const RICH_FALLBACK_BYTES = 30000;
+const ADMIN_IDS = new Set(
+  String(process.env.ADMIN_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => /^\d+$/.test(value))
+);
 
 const processedUpdates = new Map();
 const inFlightUpdates = new Map();
@@ -31,6 +38,15 @@ function loadKnowledge() {
   } catch (error) {
     console.error('Unable to load knowledge dataset:', error);
     return [];
+  }
+}
+
+function loadCrawlState() {
+  try {
+    return JSON.parse(fs.readFileSync(CRAWL_STATE_PATH, 'utf8'));
+  } catch (error) {
+    console.error('Unable to load crawl state:', error);
+    return null;
   }
 }
 
@@ -137,9 +153,7 @@ function richByteLength(value) {
 function truncateUtf8(value, maxBytes) {
   let result = String(value ?? '');
   if (richByteLength(result) <= maxBytes) return result;
-  while (result && richByteLength(`${result}…`) > maxBytes) {
-    result = result.slice(0, -1);
-  }
+  while (result && richByteLength(`${result}…`) > maxBytes) result = result.slice(0, -1);
   return `${result}…`;
 }
 
@@ -154,12 +168,11 @@ function plainTextFromHtml(value) {
 function fitRichMessage(html, fallbackText = '') {
   const source = String(html ?? '');
   if (richByteLength(source) <= MAX_RICH_MESSAGE_BYTES) return source;
-
   const safeText = truncateUtf8(plainTextFromHtml(fallbackText || source), RICH_FALLBACK_BYTES);
   return `<p>${htmlEscape(safeText)}</p>`;
 }
 
-function noResultsContent(query) {
+function noResultsContent() {
   return {
     rich_message: {
       html: [
@@ -170,7 +183,7 @@ function noResultsContent(query) {
   };
 }
 
-function noResultsHelpArticle(query) {
+function noResultsHelpArticle() {
   return {
     type: 'article',
     id: safeResultId('search-help', 'static'),
@@ -203,7 +216,7 @@ function inlineResults(query, offset) {
           thumbnail_url: NO_RESULTS_THUMBNAIL_URL,
           input_message_content: noResultsContent(safeQuery)
         },
-        noResultsHelpArticle(safeQuery)
+        noResultsHelpArticle()
       ],
       next_offset: ''
     };
@@ -363,10 +376,170 @@ function botUsername(profile) {
 }
 
 function parseCommand(text, username) {
-  const match = String(text ?? '').trim().match(/^\/(start|help|ping)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
+  const match = String(text ?? '').trim().match(/^\/(start|help|ping|admin)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
   if (!match) return null;
   if (match[2] && username && match[2].toLowerCase() !== username.toLowerCase()) return null;
   return match[1].toLowerCase();
+}
+
+function isAdminUser(userId) {
+  return userId != null && ADMIN_IDS.has(String(userId));
+}
+
+function adminButton(label, data, style = 'primary') {
+  return `<tg-button type="callback_data" style="${style}" data="${htmlEscape(data)}">${htmlEscape(label)}</tg-button>`;
+}
+
+function adminRows(rows) {
+  return rows.map((row) => `<tg-button-row align="left">${row.join('')}</tg-button-row>`).join('\n');
+}
+
+function adminPanelHtml() {
+  return [
+    '<h2>🛠 Admin Control Center</h2>',
+    '<p><b>TeleFQBot</b> internal diagnostics and knowledge-base controls.</p>',
+    '<details><summary>Available sections</summary><p>View knowledge statistics, crawl state, indexed sources, Telegram webhook health, storage details and runtime information.</p></details>',
+    '<hr/>',
+    adminRows([
+      [adminButton('📊 Statistics', 'adm:stats'), adminButton('🔄 Crawl', 'adm:crawl')],
+      [adminButton('📚 Sources', 'adm:sources'), adminButton('🩺 Health', 'adm:health')],
+      [adminButton('🗄 Storage', 'adm:storage'), adminButton('⚙️ System', 'adm:system')]
+    ]),
+    '<footer>Admin access is controlled by ADMIN_IDS.</footer>'
+  ].join('\n');
+}
+
+function adminStatsHtml() {
+  const state = loadCrawlState();
+  const categories = new Map();
+  for (const item of KNOWLEDGE) {
+    const key = item.category || 'UNCATEGORIZED';
+    categories.set(key, (categories.get(key) || 0) + 1);
+  }
+  const topCategories = [...categories.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  return [
+    '<h2>📊 Knowledge Statistics</h2>',
+    `<p><b>Total entries:</b> ${KNOWLEDGE.length}<br/><b>Indexed sources:</b> ${state?.totalSources ?? new Set(KNOWLEDGE.map((item) => item.source?.id).filter(Boolean)).size}<br/><b>Categories:</b> ${categories.size}<br/><b>Schema:</b> ${htmlEscape(state?.schemaVersion ?? 'unknown')}</p>`,
+    '<details open><summary>Top categories</summary>',
+    `<ul>${topCategories.map(([category, count]) => `<li>${htmlEscape(formatCategoryName(category))}: <b>${count}</b></li>`).join('')}</ul></details>`,
+    '<hr/>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+function adminCrawlHtml() {
+  const state = loadCrawlState();
+  const generatedAt = state?.generatedAt ? new Date(state.generatedAt).toISOString() : 'Unknown';
+  const sources = Object.entries(state?.sources ?? {}).sort((a, b) => b[1].items - a[1].items);
+  return [
+    '<h2>🔄 Crawl Status</h2>',
+    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(generatedAt)}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,
+    '<details><summary>Source item counts</summary>',
+    `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,
+    '<hr/>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+function adminSourcesHtml() {
+  const state = loadCrawlState();
+  const sources = Object.entries(state?.sources ?? {}).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return [
+    '<h2>📚 Indexed Sources</h2>',
+    `<p><b>${sources.length}</b> indexed official sources are currently represented in the crawl state.</p>`,
+    `<table bordered striped compact><tr><th>Source</th><th>Items</th></tr>${sources.map(([id, info]) => `<tr><td><code>${htmlEscape(id)}</code></td><td>${Number(info?.items ?? 0)}</td></tr>`).join('')}</table>`,
+    '<hr/>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+async function adminHealthHtml() {
+  let webhook = null;
+  let webhookError = null;
+  try {
+    webhook = (await telegram('getWebhookInfo')).result;
+  } catch (error) {
+    webhookError = error?.description || error?.message || 'Unable to query Telegram webhook';
+  }
+  const state = loadCrawlState();
+  const knowledgeHealthy = KNOWLEDGE.length > 0;
+  const crawlHealthy = state?.status === 'success' && Number(state?.totalItems ?? 0) > 0;
+  const webhookHealthy = Boolean(webhook && !webhookError);
+  return [
+    '<h2>🩺 System Health</h2>',
+    `<p><b>Knowledge:</b> ${knowledgeHealthy ? '🟢 Healthy' : '🔴 Empty'}<br/><b>Crawl:</b> ${crawlHealthy ? '🟢 Healthy' : '🔴 Check crawl state'}<br/><b>Telegram API:</b> ${webhookHealthy ? '🟢 Reachable' : '🔴 Unavailable'}</p>`,
+    '<details><summary>Webhook</summary>',
+    webhookHealthy
+      ? `<p><b>Pending updates:</b> ${Number(webhook.pending_update_count ?? 0)}<br/><b>Last error:</b> ${htmlEscape(webhook.last_error_message ?? 'None')}<br/><b>Max connections:</b> ${Number(webhook.max_connections ?? 0) || 'default'}</p>`
+      : `<p>${htmlEscape(webhookError ?? 'Webhook information unavailable.')}</p>`,
+    '</details>',
+    '<footer>Health checks are read-only and do not modify Telegram configuration.</footer>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+function adminStorageHtml() {
+  const knowledgeBytes = (() => { try { return fs.statSync(KNOWLEDGE_PATH).size; } catch { return 0; } })();
+  const stateBytes = (() => { try { return fs.statSync(CRAWL_STATE_PATH).size; } catch { return 0; } })();
+  const state = loadCrawlState();
+  return [
+    '<h2>🗄 Knowledge Storage</h2>',
+    '<p>This bot has no external database. The production knowledge store is the generated GitHub dataset deployed with the serverless function.</p>',
+    `<table bordered striped compact><tr><th>Store</th><th>Size</th></tr><tr><td><code>knowledge.json</code></td><td>${knowledgeBytes.toLocaleString()} bytes</td></tr><tr><td><code>crawl-state.json</code></td><td>${stateBytes.toLocaleString()} bytes</td></tr></table>`,
+    `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(state?.generatedAt ?? 'unknown')}</p>`,
+    '<hr/>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+async function adminSystemHtml(profile = null) {
+  const resolvedProfile = profile ?? await getBotProfile();
+  return [
+    '<h2>⚙️ Runtime Information</h2>',
+    `<p><b>Bot:</b> ${htmlEscape(botUsername(resolvedProfile))}<br/><b>Node:</b> ${htmlEscape(process.version)}<br/><b>Runtime:</b> ${process.env.VERCEL === '1' ? 'Vercel' : 'Serverless/Node'}<br/><b>Knowledge schema:</b> ${htmlEscape(loadCrawlState()?.schemaVersion ?? 'unknown')}<br/><b>Admin IDs configured:</b> ${ADMIN_IDS.size}</p>`,
+    '<footer>Runtime information is read-only.</footer>',
+    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join('\n');
+}
+
+async function renderAdminPage(page, profile = null) {
+  if (page === 'stats') return adminStatsHtml();
+  if (page === 'crawl') return adminCrawlHtml();
+  if (page === 'sources') return adminSourcesHtml();
+  if (page === 'health') return adminHealthHtml();
+  if (page === 'storage') return adminStorageHtml();
+  if (page === 'system') return adminSystemHtml(profile);
+  return adminPanelHtml();
+}
+
+async function editAdminMessage(callbackQuery, page, profile = null) {
+  const message = callbackQuery.message;
+  if (!message?.chat?.id || !message.message_id) throw new Error('Admin callback message is unavailable');
+  const html = await renderAdminPage(page, profile);
+  await telegram('editMessageText', {
+    chat_id: message.chat.id,
+    message_id: message.message_id,
+    rich_message: { html: fitRichMessage(html, plainTextFromHtml(html)) }
+  });
+}
+
+async function handleAdminCallback(update, profile) {
+  const callback = update.callback_query;
+  if (!callback?.id) return;
+  if (!isAdminUser(callback.from?.id)) {
+    await telegram('answerCallbackQuery', { callback_query_id: callback.id, text: 'Not authorized.', show_alert: true });
+    return;
+  }
+
+  const data = String(callback.data ?? '');
+  const page = data === 'adm:home' ? 'home' : data.startsWith('adm:') ? data.slice(4) : null;
+  if (!page || !['home', 'stats', 'crawl', 'sources', 'health', 'storage', 'system'].includes(page)) {
+    await telegram('answerCallbackQuery', { callback_query_id: callback.id });
+    return;
+  }
+
+  await telegram('answerCallbackQuery', { callback_query_id: callback.id });
+  await editAdminMessage(callback, page, profile);
 }
 
 function startMessageHtml(username) {
@@ -410,6 +583,16 @@ async function handleMessage(update, profile) {
   const command = parseCommand(message.text, profile?.username);
   if (!command) return;
 
+  if (command === 'admin') {
+    if (!isAdminUser(message.from?.id)) return;
+    await telegram('sendRichMessage', {
+      chat_id: message.chat.id,
+      rich_message: { html: adminPanelHtml() },
+      disable_notification: true
+    });
+    return;
+  }
+
   const username = botUsername(profile);
   let html;
 
@@ -426,7 +609,7 @@ async function handleMessage(update, profile) {
 
   await telegram('sendRichMessage', {
     chat_id: message.chat.id,
-    rich_message: { html: fitRichMessage(html, plainTextFromHtml(html)) },
+    rich_message: { html: fitRichMessage(html, html) },
     disable_notification: false
   });
 }
@@ -438,38 +621,32 @@ export default async function handler(request, response) {
   }
 
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!secret || request.headers['x-telegram-bot-api-secret-token'] !== secret) {
+  if (secret && request.headers['x-telegram-bot-api-secret-token'] !== secret) {
     response.status(401).json({ ok: false });
     return;
   }
 
-  let update;
   try {
-    update = parseWebhookBody(request);
-  } catch (error) {
-    response.status(error?.status ?? 400).json({ ok: false });
-    return;
-  }
+    const update = parseWebhookBody(request);
+    if (!update || typeof update !== 'object') throw Object.assign(new Error('Invalid Telegram update'), { status: 400 });
+    if (!validUpdateId(update.update_id)) throw Object.assign(new Error('Invalid Telegram update_id'), { status: 400 });
 
-  if (!update || typeof update !== 'object' || !validUpdateId(update.update_id)) {
-    response.status(400).json({ ok: false });
-    return;
-  }
-
-  try {
     await processUpdateOnce(update.update_id, async () => {
-      const profile = await getBotProfile();
+      if (update.callback_query) {
+        const profile = await getBotProfile();
+        await handleAdminCallback(update, profile);
+        return;
+      }
 
       if (update.inline_query) {
         const queryId = update.inline_query.id;
-        if (!queryId) return;
-        const query = String(update.inline_query.query ?? '').slice(0, 256);
-        const offset = String(update.inline_query.offset ?? '').slice(0, 64);
+        const query = update.inline_query.query ?? '';
+        const offset = update.inline_query.offset ?? '';
         try {
           const page = inlineResults(query, offset);
           await telegram('answerInlineQuery', {
             inline_query_id: queryId,
-            results: page.results.slice(0, MAX_RESULTS),
+            results: page.results,
             cache_time: INLINE_CACHE_TIME,
             is_personal: true,
             next_offset: page.next_offset
@@ -478,6 +655,7 @@ export default async function handler(request, response) {
           if (!isExpiredInlineQueryError(error)) throw error;
         }
       } else if (update.message) {
+        const profile = await getBotProfile();
         await handleMessage(update, profile);
       }
     });
@@ -485,6 +663,6 @@ export default async function handler(request, response) {
     response.status(200).json({ ok: true });
   } catch (error) {
     console.error('Webhook error:', error);
-    response.status(error?.status && error.status >= 400 && error.status < 600 ? error.status : 500).json({ ok: false });
+    response.status(error?.status && error.status >= 400 && error.status < 500 ? error.status : 500).json({ ok: false });
   }
 }
