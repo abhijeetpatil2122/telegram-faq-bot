@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 
+// Admin callback hardening regression coverage.
 process.env.BOT_TOKEN = 'test-token';
 process.env.TELEGRAM_WEBHOOK_SECRET = 'test-secret';
 process.env.ADMIN_IDS = '123,456';
