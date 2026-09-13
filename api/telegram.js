@@ -428,13 +428,43 @@ function adminStatsHtml() {
   ].join('\n');
 }
 
+function formatIndiaDateTime(value) {
+  if (!value) return 'Unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZoneName: 'short'
+  }).format(date);
+}
+
+function formatHumanBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!Number.isFinite(value) || value < 0) return '0 B';
+  if (value < 1024) return `${value} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let size = value;
+  let unit = -1;
+  do {
+    size /= 1024;
+    unit += 1;
+  } while (size >= 1024 && unit < units.length - 1);
+  return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[unit]}`;
+}
+
 function adminCrawlHtml() {
   const state = loadCrawlState();
-  const generatedAt = state?.generatedAt ? new Date(state.generatedAt).toISOString() : 'Unknown';
   const sources = Object.entries(state?.sources ?? {}).sort((a, b) => b[1].items - a[1].items);
   return [
     '<h2>🔄 Crawl Status</h2>',
-    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(generatedAt)}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,
+    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,
     '<details><summary>Source item counts</summary>',
     `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,
     '<hr/>',
@@ -486,8 +516,8 @@ function adminStorageHtml() {
   return [
     '<h2>🗄 Knowledge Storage</h2>',
     '<p>This bot has no external database. The production knowledge store is the generated GitHub dataset deployed with the serverless function.</p>',
-    `<table bordered striped compact><tr><th>Store</th><th>Size</th></tr><tr><td><code>knowledge.json</code></td><td>${knowledgeBytes.toLocaleString()} bytes</td></tr><tr><td><code>crawl-state.json</code></td><td>${stateBytes.toLocaleString()} bytes</td></tr></table>`,
-    `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(state?.generatedAt ?? 'unknown')}</p>`,
+    `<table bordered striped compact><tr><th>Store</th><th>Size</th></tr><tr><td><code>knowledge.json</code></td><td>${formatHumanBytes(knowledgeBytes)}</td></tr><tr><td><code>crawl-state.json</code></td><td>${formatHumanBytes(stateBytes)}</td></tr></table>`,
+    `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}</p>`,
     '<hr/>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
   ].join('\n');
