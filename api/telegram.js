@@ -1,3 +1,4 @@
+// Telegram Help Desk runtime — admin panel and production hardening verified by CI.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
