@@ -8,6 +8,7 @@ A serverless Telegram Help Desk backed by curated official Telegram sources. It 
 - 📚 Official Telegram FAQ, security, Premium, channels, bot and terms coverage.
 - 🧩 Rich Messages with headings, lists, code, tables, quotes, details and links.
 - 🔗 Official source button on every answer.
+- 🛠 Protected admin control center with live knowledge, crawl, storage and health diagnostics.
 - 🚫 No hallucinated answers: unsupported questions return no official result.
 - ⚡ GitHub Actions refreshes knowledge every 6 hours.
 - ☁️ Vercel serverless runtime; no database or VPS required.
@@ -70,6 +71,9 @@ The live search engine in `api/telegram.js` remains deterministic. It considers 
 | `/start` | Open the Help Desk welcome screen. |
 | `/help` | Show help and search instructions. |
 | `/ping` | Measure Telegram API round-trip latency. |
+| `/admin` | Open the protected admin control center. |
+
+`/admin` is available only to Telegram user IDs configured in `ADMIN_IDS`. The admin panel uses Rich Message callback buttons and edits the existing message when navigating, so it does not create chat spam.
 
 Inline mode:
 
@@ -137,6 +141,7 @@ Required environment variables:
 
 - `BOT_TOKEN`
 - `TELEGRAM_WEBHOOK_SECRET`
+- `ADMIN_IDS` — comma-separated Telegram user IDs allowed to use `/admin`, for example `123456789,987654321`
 
 The existing Vercel webhook and Rich Message implementation remain the runtime foundation while the crawler and knowledge layer evolve.
 
