@@ -60,6 +60,7 @@ jobs:
               s, n = re.subn(pattern, replacement, s, count=1)
               if n != 1: raise SystemExit('admin callback block not found')
           s = s.replace("      if (update.callback_query) {\n        const profile = await getBotProfile();\n        await handleAdminCallback(update, profile);\n        return;\n      }", "      if (update.callback_query) {\n        await handleAdminCallback(update);\n        return;\n      }", 1)
+          s = s.replace("].join('\n');", "].join(' ');")
           p.write_text(s)
           print('Admin runtime patch applied.')
           PY
