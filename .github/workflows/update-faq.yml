@@ -39,52 +39,37 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('api/telegram.js')
           s = p.read_text()
 
-          def replace_once(old, new, label):
-              global s
-              count = s.count(old)
-              if count != 1:
-                  raise SystemExit(f'{label}: expected 1 match, found {count}')
-              s = s.replace(old, new, 1)
+          if 'const GITHUB_REPOSITORY =' not in s:
+              s = s.replace("const RICH_FALLBACK_BYTES = 30000;\n", "const RICH_FALLBACK_BYTES = 30000;\nconst GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY ?? 'abhijeetpatil2122/telegram-faq-bot';\nconst GITHUB_WORKFLOW = process.env.GITHUB_WORKFLOW ?? 'update-faq.yml';\nconst GITHUB_API_VERSION = '2026-03-10';\n", 1)
 
-          replace_once(
-              "const RICH_FALLBACK_BYTES = 30000;\n",
-              "const RICH_FALLBACK_BYTES = 30000;\nconst GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY ?? 'abhijeetpatil2122/telegram-faq-bot';\nconst GITHUB_WORKFLOW = process.env.GITHUB_WORKFLOW ?? 'update-faq.yml';\nconst GITHUB_API_VERSION = '2026-03-10';\n",
-              'github constants'
-          )
+          if 'function answerCallbackQuerySafe(' not in s:
+              marker = "function isExpiredInlineQueryError(error) {\n  return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');\n}\n"
+              helpers = marker + "\nfunction isExpiredCallbackQueryError(error) {\n  return error?.status === 400 && /query is too old|response timeout expired|query ID is invalid/i.test(error?.description ?? error?.message ?? '');\n}\n\nasync function answerCallbackQuerySafe(callbackId, payload = {}) {\n  try {\n    await telegram('answerCallbackQuery', { callback_query_id: callbackId, ...payload });\n  } catch (error) {\n    if (!isExpiredCallbackQueryError(error)) throw error;\n    console.warn('Ignoring expired callback query:', error.description ?? error.message);\n  }\n}\n\nasync function triggerCrawlWorkflow() {\n  const token = String(process.env.GITHUB_TOKEN ?? '').trim();\n  if (!token) throw new Error('GITHUB_TOKEN is not configured for manual crawl control');\n  const url = `https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${encodeURIComponent(GITHUB_WORKFLOW)}/dispatches`;\n  const response = await fetch(url, {\n    method: 'POST',\n    headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'content-type': 'application/json', 'x-github-api-version': GITHUB_API_VERSION },\n    body: JSON.stringify({ ref: 'main' })\n  });\n  if (!response.ok) {\n    const body = await response.text().catch(() => '');\n    throw new Error(`GitHub workflow dispatch failed: HTTP ${response.status} ${body}`.trim());\n  }\n}\n"
+              if marker not in s:
+                  raise SystemExit('callback helper insertion marker not found')
+              s = s.replace(marker, helpers, 1)
 
-          replace_once(
-              "function isExpiredInlineQueryError(error) {\n  return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');\n}\n",
-              "function isExpiredInlineQueryError(error) {\n  return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');\n}\n\nfunction isExpiredCallbackQueryError(error) {\n  return error?.status === 400 && /query is too old|response timeout expired|query ID is invalid/i.test(error?.description ?? error?.message ?? '');\n}\n\nasync function answerCallbackQuerySafe(callbackId, payload = {}) {\n  try {\n    await telegram('answerCallbackQuery', { callback_query_id: callbackId, ...payload });\n  } catch (error) {\n    if (!isExpiredCallbackQueryError(error)) throw error;\n    console.warn('Ignoring expired callback query:', error.description ?? error.message);\n  }\n}\n\nasync function triggerCrawlWorkflow() {\n  const token = String(process.env.GITHUB_TOKEN ?? '').trim();\n  if (!token) throw new Error('GITHUB_TOKEN is not configured for manual crawl control');\n\n  const url = `https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${encodeURIComponent(GITHUB_WORKFLOW)}/dispatches`;\n  const response = await fetch(url, {\n    method: 'POST',\n    headers: {\n      accept: 'application/vnd.github+json',\n      authorization: `Bearer ${token}`,\n      'content-type': 'application/json',\n      'x-github-api-version': GITHUB_API_VERSION\n    },\n    body: JSON.stringify({ ref: 'main' })\n  });\n  if (!response.ok) {\n    const body = await response.text().catch(() => '');\n    throw new Error(`GitHub workflow dispatch failed: HTTP ${response.status} ${body}`.trim());\n  }\n}\n",
-              'callback helpers'
-          )
+          if "adminButton('▶️ Run Crawl', 'adm:run-crawl'" not in s:
+              pattern = r"function adminCrawlHtml\(\) \{[\s\S]*?\n\}\n\nfunction adminSourcesHtml"
+              replacement = "function formatIndiaDateTime(value) {\n  if (!value) return 'Unknown';\n  const date = new Date(value);\n  if (Number.isNaN(date.getTime())) return 'Unknown';\n  return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZoneName: 'short' }).format(date);\n}\n\nfunction formatHumanBytes(bytes) {\n  const value = Number(bytes || 0);\n  if (!Number.isFinite(value) || value < 0) return '0 B';\n  if (value < 1024) return `${value} B`;\n  const units = ['KB', 'MB', 'GB', 'TB'];\n  let size = value;\n  let unit = -1;\n  do { size /= 1024; unit += 1; } while (size >= 1024 && unit < units.length - 1);\n  return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[unit]}`;\n}\n\nfunction adminCrawlHtml() {\n  const state = loadCrawlState();\n  const sources = Object.entries(state?.sources ?? {}).sort((a, b) => b[1].items - a[1].items);\n  return [\n    '<h2>🔄 Crawl Status</h2>',\n    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,\n    '<details><summary>Source item counts</summary>',\n    `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,\n    '<hr/>',\n    adminRows([[adminButton('▶️ Run Crawl', 'adm:run-crawl', 'success'), adminButton('↩️ Back', 'adm:home', 'link')]])\n  ].join('\\n');\n}\n\nfunction adminCrawlStartedHtml(error = null) {\n  if (error) {\n    return ['<h2>🔄 Crawl Control</h2>', `<p><b>❌ Unable to start crawl.</b><br/>${htmlEscape(error)}</p>`, '<footer>Configure the GitHub Actions token in Vercel before using manual crawl control.</footer>', adminRows([[adminButton('↩️ Back', 'adm:home', 'link'), adminButton('🔄 Try Again', 'adm:run-crawl')]])].join('\\n');\n  }\n  return ['<h2>🔄 Crawl Started</h2>', '<p>✅ The GitHub Actions crawl has been queued.</p>', '<p>You will receive a private notification when the crawl finishes, including whether the knowledge base changed.</p>', adminRows([[adminButton('🔄 Crawl Status', 'adm:crawl'), adminButton('↩️ Back', 'adm:home', 'link')]])].join('\\n');\n}\n\nfunction adminSourcesHtml"
+              s, n = re.subn(pattern, replacement, s, count=1)
+              if n != 1: raise SystemExit('adminCrawlHtml block not found')
 
-          replace_once(
-              "function adminCrawlHtml() {\n  const state = loadCrawlState();\n  const generatedAt = state?.generatedAt ? new Date(state.generatedAt).toISOString() : 'Unknown';\n  const sources = Object.entries(state?.sources ?? {}).sort((a, b) => b[1].items - a[1].items);\n  return [\n    '<h2>🔄 Crawl Status</h2>',\n    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(generatedAt)}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,\n    '<details><summary>Source item counts</summary>',\n    `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,\n    '<hr/>',\n    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])\n  ].join('\\n');\n}\n",
-              "function formatIndiaDateTime(value) {\n  if (!value) return 'Unknown';\n  const date = new Date(value);\n  if (Number.isNaN(date.getTime())) return 'Unknown';\n  return new Intl.DateTimeFormat('en-IN', {\n    timeZone: 'Asia/Kolkata',\n    day: '2-digit',\n    month: 'short',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: true,\n    timeZoneName: 'short'\n  }).format(date);\n}\n\nfunction formatHumanBytes(bytes) {\n  const value = Number(bytes || 0);\n  if (!Number.isFinite(value) || value < 0) return '0 B';\n  if (value < 1024) return `${value} B`;\n  const units = ['KB', 'MB', 'GB', 'TB'];\n  let size = value;\n  let unit = -1;\n  do {\n    size /= 1024;\n    unit += 1;\n  } while (size >= 1024 && unit < units.length - 1);\n  return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[unit]}`;\n}\n\nfunction adminCrawlHtml() {\n  const state = loadCrawlState();\n  const sources = Object.entries(state?.sources ?? {}).sort((a, b) => b[1].items - a[1].items);\n  return [\n    '<h2>🔄 Crawl Status</h2>',\n    `<p><b>Status:</b> ${htmlEscape(state?.status ?? 'unknown')}<br/><b>Generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}<br/><b>Total entries:</b> ${state?.totalItems ?? KNOWLEDGE.length}<br/><b>Total sources:</b> ${state?.totalSources ?? sources.length}</p>`,\n    '<details><summary>Source item counts</summary>',\n    `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,\n    '<hr/>',\n    adminRows([[adminButton('▶️ Run Crawl', 'adm:run-crawl', 'success'), adminButton('↩️ Back', 'adm:home', 'link')]])\n  ].join('\\n');\n}\n\nfunction adminCrawlStartedHtml(error = null) {\n  if (error) {\n    return [\n      '<h2>🔄 Crawl Control</h2>',\n      `<p><b>❌ Unable to start crawl.</b><br/>${htmlEscape(error)}</p>`,\n      '<footer>Configure the GitHub Actions token in Vercel before using manual crawl control.</footer>',\n      adminRows([[adminButton('↩️ Back', 'adm:home', 'link'), adminButton('🔄 Try Again', 'adm:run-crawl')]])\n    ].join('\\n');\n  }\n  return [\n    '<h2>🔄 Crawl Started</h2>',\n    '<p>✅ The GitHub Actions crawl has been queued.</p>',\n    '<p>You will receive a private notification when the crawl finishes, including whether the knowledge base changed.</p>',\n    adminRows([[adminButton('🔄 Crawl Status', 'adm:crawl'), adminButton('↩️ Back', 'adm:home', 'link')]])\n  ].join('\\n');\n}\n",
-              'crawl panel'
-          )
+          s = re.sub(r"<td>\$\{knowledgeBytes\.toLocaleString\(\)\} bytes</td>", r"<td>${formatHumanBytes(knowledgeBytes)}</td>", s, count=1)
+          s = re.sub(r"<td>\$\{stateBytes\.toLocaleString\(\)\} bytes</td>", r"<td>${formatHumanBytes(stateBytes)}</td>", s, count=1)
+          s = s.replace("htmlEscape(state?.generatedAt ?? 'unknown')", "htmlEscape(formatIndiaDateTime(state?.generatedAt))", 1)
 
-          replace_once(
-              "`<table bordered striped compact><tr><th>Store</th><th>Size</th></tr><tr><td><code>knowledge.json</code></td><td>${knowledgeBytes.toLocaleString()} bytes</td></tr><tr><td><code>crawl-state.json</code></td><td>${stateBytes.toLocaleString()} bytes</td></tr></table>`,\n    `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(state?.generatedAt ?? 'unknown')}</p>`,",
-              "`<table bordered striped compact><tr><th>Store</th><th>Size</th></tr><tr><td><code>knowledge.json</code></td><td>${formatHumanBytes(knowledgeBytes)}</td></tr><tr><td><code>crawl-state.json</code></td><td>${formatHumanBytes(stateBytes)}</td></tr></table>`,\n    `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}</p>`,",
-              'storage formatting'
-          )
+          if 'async function handleAdminCallback(update) {' not in s:
+              pattern = r"async function handleAdminCallback\(update, profile\) \{[\s\S]*?\n\}\n\nfunction startMessageHtml"
+              replacement = "async function handleAdminCallback(update) {\n  const callback = update.callback_query;\n  if (!callback?.id) return;\n  if (!isAdminUser(callback.from?.id)) {\n    await answerCallbackQuerySafe(callback.id, { text: 'Not authorized.', show_alert: true });\n    return;\n  }\n  const data = String(callback.data ?? '');\n  const page = data === 'adm:home' ? 'home' : data.startsWith('adm:') ? data.slice(4) : null;\n  if (!page || !['home', 'stats', 'crawl', 'run-crawl', 'sources', 'health', 'storage', 'system'].includes(page)) {\n    await answerCallbackQuerySafe(callback.id);\n    return;\n  }\n  await answerCallbackQuerySafe(callback.id);\n  if (page === 'run-crawl') {\n    try {\n      await triggerCrawlWorkflow();\n      await telegram('editMessageText', { chat_id: callback.message.chat.id, message_id: callback.message.message_id, rich_message: { html: adminCrawlStartedHtml() } });\n    } catch (error) {\n      await telegram('editMessageText', { chat_id: callback.message.chat.id, message_id: callback.message.message_id, rich_message: { html: adminCrawlStartedHtml(error?.message ?? 'Unknown error') } });\n    }\n    return;\n  }\n  const profile = page === 'system' ? await getBotProfile() : null;\n  await editAdminMessage(callback, page, profile);\n}\n\nfunction startMessageHtml"
+              s, n = re.subn(pattern, replacement, s, count=1)
+              if n != 1: raise SystemExit('admin callback block not found')
 
-          replace_once(
-              "async function handleAdminCallback(update, profile) {\n  const callback = update.callback_query;\n  if (!callback?.id) return;\n  if (!isAdminUser(callback.from?.id)) {\n    await telegram('answerCallbackQuery', { callback_query_id: callback.id, text: 'Not authorized.', show_alert: true });\n    return;\n  }\n\n  const data = String(callback.data ?? '');\n  const page = data === 'adm:home' ? 'home' : data.startsWith('adm:') ? data.slice(4) : null;\n  if (!page || !['home', 'stats', 'crawl', 'sources', 'health', 'storage', 'system'].includes(page)) {\n    await telegram('answerCallbackQuery', { callback_query_id: callback.id });\n    return;\n  }\n\n  await telegram('answerCallbackQuery', { callback_query_id: callback.id });\n  await editAdminMessage(callback, page, profile);\n}\n",
-              "async function handleAdminCallback(update) {\n  const callback = update.callback_query;\n  if (!callback?.id) return;\n  if (!isAdminUser(callback.from?.id)) {\n    await answerCallbackQuerySafe(callback.id, { text: 'Not authorized.', show_alert: true });\n    return;\n  }\n\n  const data = String(callback.data ?? '');\n  const page = data === 'adm:home' ? 'home' : data.startsWith('adm:') ? data.slice(4) : null;\n  if (!page || !['home', 'stats', 'crawl', 'run-crawl', 'sources', 'health', 'storage', 'system'].includes(page)) {\n    await answerCallbackQuerySafe(callback.id);\n    return;\n  }\n\n  await answerCallbackQuerySafe(callback.id);\n\n  if (page === 'run-crawl') {\n    try {\n      await triggerCrawlWorkflow();\n      await telegram('editMessageText', {\n        chat_id: callback.message.chat.id,\n        message_id: callback.message.message_id,\n        rich_message: { html: adminCrawlStartedHtml() }\n      });\n    } catch (error) {\n      await telegram('editMessageText', {\n        chat_id: callback.message.chat.id,\n        message_id: callback.message.message_id,\n        rich_message: { html: adminCrawlStartedHtml(error?.message ?? 'Unknown error') }\n      });\n    }\n    return;\n  }\n\n  const profile = page === 'system' ? await getBotProfile() : null;\n  await editAdminMessage(callback, page, profile);\n}\n",
-              'callback handler'
-          )
-
-          replace_once(
-              "      if (update.callback_query) {\n        const profile = await getBotProfile();\n        await handleAdminCallback(update, profile);\n        return;\n      }",
-              "      if (update.callback_query) {\n        await handleAdminCallback(update);\n        return;\n      }",
-              'callback dispatch'
-          )
-
+          s = s.replace("      if (update.callback_query) {\n        const profile = await getBotProfile();\n        await handleAdminCallback(update, profile);\n        return;\n      }", "      if (update.callback_query) {\n        await handleAdminCallback(update);\n        return;\n      }", 1)
           p.write_text(s)
           print('Admin runtime patch applied.')
           PY
@@ -109,20 +94,10 @@ jobs:
           const oldMap = new Map((before.items ?? []).map((item) => [item.id, JSON.stringify(item)]));
           const newMap = new Map((after.items ?? []).map((item) => [item.id, JSON.stringify(item)]));
           let added = 0, removed = 0, updated = 0;
-          for (const [id, value] of newMap) {
-            if (!oldMap.has(id)) added += 1;
-            else if (oldMap.get(id) !== value) updated += 1;
-          }
+          for (const [id, value] of newMap) { if (!oldMap.has(id)) added += 1; else if (oldMap.get(id) !== value) updated += 1; }
           for (const id of oldMap.keys()) if (!newMap.has(id)) removed += 1;
-          const summary = {
-            added,
-            removed,
-            updated,
-            total: Array.isArray(after.items) ? after.items.length : 0,
-            sources: Array.isArray(after.sources) ? after.sources.length : Object.keys(after.sources ?? {}).length,
-            changed: added > 0 || removed > 0 || updated > 0,
-            generatedAt: JSON.parse(fs.readFileSync('data/crawl-state.json', 'utf8')).generatedAt ?? null
-          };
+          const state = JSON.parse(fs.readFileSync('data/crawl-state.json', 'utf8'));
+          const summary = { added, removed, updated, total: Array.isArray(after.items) ? after.items.length : 0, sources: Object.keys(state.sources ?? {}).length, changed: added > 0 || removed > 0 || updated > 0, generatedAt: state.generatedAt ?? null };
           fs.writeFileSync('/tmp/crawl-summary.json', JSON.stringify(summary));
           console.log(summary);
           NODE
@@ -134,13 +109,13 @@ jobs:
         run: npm run search:benchmark
       - name: Commit changes
         run: |
-          if git diff --quiet -- data/knowledge.json data/crawl-state.json; then
-            echo 'No knowledge changes.'
+          if git diff --quiet -- data/knowledge.json data/crawl-state.json api/telegram.js; then
+            echo 'No knowledge or runtime changes.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/knowledge.json data/crawl-state.json
+          git add api/telegram.js data/knowledge.json data/crawl-state.json
           git commit -m 'chore(data): update Telegram knowledge'
           git push
       - name: Send crawl notification
@@ -156,7 +131,6 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const summary = JSON.parse(fs.readFileSync('/tmp/crawl-summary.json', 'utf8'));
-          const state = JSON.parse(fs.readFileSync('data/crawl-state.json', 'utf8'));
           const date = summary.generatedAt ? new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZoneName: 'short' }).format(new Date(summary.generatedAt)) : 'Unknown';
           const html = summary.changed
             ? `<h2>🔄 Crawl Completed</h2><p><b>✅ Knowledge base updated</b></p><p>➕ New entries: <b>${summary.added}</b><br/>➖ Removed entries: <b>${summary.removed}</b><br/>✏️ Updated entries: <b>${summary.updated}</b></p><p>📚 Total entries: <b>${summary.total}</b><br/>📦 Sources: <b>${summary.sources}</b><br/>🕘 ${date}</p>`
