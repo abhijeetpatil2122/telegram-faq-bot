@@ -22,6 +22,9 @@ const MAX_TRACKED_UPDATES = 5000;
 const PROCESSED_UPDATE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_RICH_MESSAGE_BYTES = 32768;
 const RICH_FALLBACK_BYTES = 30000;
+const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY ?? 'abhijeetpatil2122/telegram-faq-bot';
+const GITHUB_WORKFLOW = process.env.GITHUB_WORKFLOW ?? 'update-faq.yml';
+const GITHUB_API_VERSION = '2026-03-10';
 const ADMIN_IDS = new Set(
   String(process.env.ADMIN_IDS ?? '')
     .split(',')
@@ -296,6 +299,27 @@ function isExpiredInlineQueryError(error) {
   return error?.status === 400 && /query is too old|response timeout expired|query id is invalid/i.test(error?.description ?? error?.message ?? '');
 }
 
+function isExpiredCallbackQueryError(error) {
+  return error?.status === 400 && /query is too old|response timeout expired|query ID is invalid/i.test(error?.description ?? error?.message ?? '');
+}
+
+async function answerCallbackQuerySafe(callbackId, payload = {}) {
+  try {
+    await telegram('answerCallbackQuery', { callback_query_id: callbackId, ...payload });
+  } catch (error) {
+    if (!isExpiredCallbackQueryError(error)) throw error;
+    console.warn('Ignoring expired callback query:', error.description ?? error.message);
+  }
+}
+
+async function triggerCrawlWorkflow() {
+  const token = String(process.env.GITHUB_TOKEN ?? '').trim();
+  if (!token) throw new Error('GITHUB_TOKEN is not configured for manual crawl control');
+  const url = `https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${encodeURIComponent(GITHUB_WORKFLOW)}/dispatches`;
+  const response = await fetch(url, { method: 'POST', headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'content-type': 'application/json', 'x-github-api-version': GITHUB_API_VERSION }, body: JSON.stringify({ ref: 'main' }) });
+  if (!response.ok) { const body = await response.text().catch(() => ''); throw new Error(`GitHub workflow dispatch failed: HTTP ${response.status} ${body}`.trim()); }
+}
+
 function cleanupProcessedUpdates(now = Date.now()) {
   for (const [updateId, timestamp] of processedUpdates) {
     if (now - timestamp > PROCESSED_UPDATE_TTL_MS) processedUpdates.delete(updateId);
@@ -468,8 +492,13 @@ function adminCrawlHtml() {
     '<details><summary>Source item counts</summary>',
     `<ul>${sources.map(([id, info]) => `<li><code>${htmlEscape(id)}</code> — ${Number(info?.items ?? 0)}</li>`).join('')}</ul></details>`,
     '<hr/>',
-    adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+    adminRows([[adminButton('▶️ Run Crawl', 'adm:run-crawl', 'success'), adminButton('↩️ Back', 'adm:home', 'link')]])
+  ].join(' ');
+}
+
+function adminCrawlStartedHtml(error = null) {
+  if (error) return ['<h2>🔄 Crawl Control</h2>', `<p><b>❌ Unable to start crawl.</b><br/>${htmlEscape(error)}</p>`, '<footer>Configure the GitHub Actions token in Vercel before using manual crawl control.</footer>', adminRows([[adminButton('↩️ Back', 'adm:home', 'link'), adminButton('🔄 Try Again', 'adm:run-crawl')]])].join(' ');
+  return ['<h2>🔄 Crawl Started</h2>', '<p>✅ The GitHub Actions crawl has been queued.</p>', '<p>You will receive a private notification when the crawl finishes, including whether the knowledge base changed.</p>', adminRows([[adminButton('🔄 Crawl Status', 'adm:crawl'), adminButton('↩️ Back', 'adm:home', 'link')]])].join(' ');
 }
 
 function adminSourcesHtml() {
@@ -554,22 +583,20 @@ async function editAdminMessage(callbackQuery, page, profile = null) {
   });
 }
 
-async function handleAdminCallback(update, profile) {
+async function handleAdminCallback(update) {
   const callback = update.callback_query;
   if (!callback?.id) return;
-  if (!isAdminUser(callback.from?.id)) {
-    await telegram('answerCallbackQuery', { callback_query_id: callback.id, text: 'Not authorized.', show_alert: true });
-    return;
-  }
-
+  if (!isAdminUser(callback.from?.id)) { await answerCallbackQuerySafe(callback.id, { text: 'Not authorized.', show_alert: true }); return; }
   const data = String(callback.data ?? '');
   const page = data === 'adm:home' ? 'home' : data.startsWith('adm:') ? data.slice(4) : null;
-  if (!page || !['home', 'stats', 'crawl', 'sources', 'health', 'storage', 'system'].includes(page)) {
-    await telegram('answerCallbackQuery', { callback_query_id: callback.id });
+  if (!page || !['home', 'stats', 'crawl', 'run-crawl', 'sources', 'health', 'storage', 'system'].includes(page)) { await answerCallbackQuerySafe(callback.id); return; }
+  await answerCallbackQuerySafe(callback.id);
+  if (page === 'run-crawl') {
+    try { await triggerCrawlWorkflow(); await telegram('editMessageText', { chat_id: callback.message.chat.id, message_id: callback.message.message_id, rich_message: { html: adminCrawlStartedHtml() } }); }
+    catch (error) { await telegram('editMessageText', { chat_id: callback.message.chat.id, message_id: callback.message.message_id, rich_message: { html: adminCrawlStartedHtml(error?.message ?? 'Unknown error') } }); }
     return;
   }
-
-  await telegram('answerCallbackQuery', { callback_query_id: callback.id });
+  const profile = page === 'system' ? await getBotProfile() : null;
   await editAdminMessage(callback, page, profile);
 }
 
@@ -664,8 +691,7 @@ export default async function handler(request, response) {
 
     await processUpdateOnce(update.update_id, async () => {
       if (update.callback_query) {
-        const profile = await getBotProfile();
-        await handleAdminCallback(update, profile);
+        await handleAdminCallback(update);
         return;
       }
 
