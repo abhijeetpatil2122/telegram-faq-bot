@@ -14,5 +14,16 @@
     "search:benchmark": "node scripts/tests/search-benchmark.mjs",
     "runtime:test": "node scripts/tests/runtime.mjs",
     "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs"
+  },
+  "scripts": {
+    "postinstall": "node scripts/admin-source-diagnostics.mjs",
+    "dev": "node --watch api/telegram.js",
+    "crawl": "node scripts/crawl/index.mjs",
+    "validate": "node scripts/validate-knowledge.mjs && node scripts/validate-rich-knowledge.mjs",
+    "search:test": "node scripts/tests/search.mjs",
+    "search:engine:test": "node scripts/tests/search-engine.mjs",
+    "search:benchmark": "node scripts/tests/search-benchmark.mjs",
+    "runtime:test": "node scripts/tests/runtime.mjs",
+    "check": "node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs"
   }
 }
