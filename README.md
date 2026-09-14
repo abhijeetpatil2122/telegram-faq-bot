@@ -8,7 +8,7 @@ A serverless Telegram Help Desk backed by curated official Telegram sources. It 
 - 📚 Official Telegram FAQ, security, Premium, channels, bot and terms coverage.
 - 🧩 Rich Messages with headings, lists, code, tables, quotes, details and links.
 - 🔗 Official source button on every answer.
-- 🛠 Protected admin control center with live knowledge, crawl, storage and health diagnostics.
+- 🛠 Protected admin control center with live knowledge, crawl, storage, health and source diagnostics.
 - 🚫 No hallucinated answers: unsupported questions return no official result.
 - ⚡ GitHub Actions refreshes knowledge every 6 hours.
 - ☁️ Vercel serverless runtime; no database or VPS required.
@@ -62,7 +62,7 @@ MarshalX's `telegram-crawler` is used as a coverage/discovery reference, not as 
 
 ## 🔍 Search
 
-The live search engine in `api/telegram.js` remains deterministic. It considers question/title matches, phrases, aliases, keywords, sections and token coverage. The upgraded knowledge schema adds category, audience, priority and provenance without replacing the existing search contract.
+The live search engine remains deterministic. It considers question/title matches, phrases, aliases, keywords, sections and token coverage. The knowledge schema adds category, audience, priority and provenance without replacing the existing search contract.
 
 ## 🤖 Commands
 
@@ -74,6 +74,8 @@ The live search engine in `api/telegram.js` remains deterministic. It considers 
 | `/admin` | Open the protected admin control center. |
 
 `/admin` is available only to Telegram user IDs configured in `ADMIN_IDS`. The admin panel uses Rich Message callback buttons and edits the existing message when navigating, so it does not create chat spam.
+
+Admin controls include Statistics, Crawl Status, Source Diagnostics, Health, Storage and System. `▶️ Run Crawl` queues the GitHub Actions workflow; it does not crawl Telegram from the Vercel runtime.
 
 Inline mode:
 
@@ -98,20 +100,26 @@ The crawler:
 ## 📁 Structure
 
 ```text
-api/telegram.js
+api/
+  telegram.js
 config/
   sources.json
   categories.json
   crawler.json
+  search.json
   rich-message.json
-scripts/
-  crawl/index.mjs
-  crawl-faq.mjs              # legacy crawler retained during migration
-  validate-knowledge.mjs
 data/
   knowledge.json
   crawl-state.json
-scripts/...
+scripts/
+  crawl/index.mjs
+  admin-source-diagnostics.mjs
+  search-engine.mjs
+  validate-knowledge.mjs
+  validate-rich-knowledge.mjs
+  tests/
+.github/workflows/
+  update-faq.yml
 docs/
   ARCHITECTURE.md
   SOURCES.md
@@ -119,7 +127,6 @@ docs/
   KNOWLEDGE_SCHEMA.md
   SEARCH.md
   RICH_MESSAGES.md
-.github/workflows/update-faq.yml
 ```
 
 ## 🧪 Development
@@ -129,8 +136,11 @@ Requires Node.js 24.
 ```bash
 npm install
 npm run check
-npm run crawl
+npm run runtime:test
 npm run validate
+npm run search:test
+npm run search:engine:test
+npm run search:benchmark
 ```
 
 `npm run crawl` rebuilds the generated knowledge from configured official sources.
@@ -142,8 +152,9 @@ Required environment variables:
 - `BOT_TOKEN`
 - `TELEGRAM_WEBHOOK_SECRET`
 - `ADMIN_IDS` — comma-separated Telegram user IDs allowed to use `/admin`, for example `123456789,987654321`
+- `GITHUB_TOKEN` — token used only by the admin `▶️ Run Crawl` control to dispatch the GitHub Actions workflow
 
-The existing Vercel webhook and Rich Message implementation remain the runtime foundation while the crawler and knowledge layer evolve.
+The webhook, search and Rich Message implementation run from the Vercel serverless function. The Vercel runtime does not crawl Telegram sources.
 
 ## 📜 Scope
 
