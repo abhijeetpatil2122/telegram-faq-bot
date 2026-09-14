@@ -431,7 +431,7 @@ function adminPanelHtml() {
       [adminButton('🗄 Storage', 'adm:storage'), adminButton('⚙️ System', 'adm:system')]
     ]),
     '<footer>Admin access is controlled by ADMIN_IDS.</footer>'
-  ].join('\n');
+  ].join(' ');
 }
 
 function adminStatsHtml() {
@@ -449,7 +449,7 @@ function adminStatsHtml() {
     `<ul>${topCategories.map(([category, count]) => `<li>${htmlEscape(formatCategoryName(category))}: <b>${count}</b></li>`).join('')}</ul></details>`,
     '<hr/>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+  ].join(' ');
 }
 
 function formatIndiaDateTime(value) {
@@ -510,7 +510,7 @@ function adminSourcesHtml() {
     `<table bordered striped compact><tr><th>Source</th><th>Items</th></tr>${sources.map(([id, info]) => `<tr><td><code>${htmlEscape(id)}</code></td><td>${Number(info?.items ?? 0)}</td></tr>`).join('')}</table>`,
     '<hr/>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+  ].join(' ');
 }
 
 async function adminHealthHtml() {
@@ -535,7 +535,7 @@ async function adminHealthHtml() {
     '</details>',
     '<footer>Health checks are read-only and do not modify Telegram configuration.</footer>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+  ].join(' ');
 }
 
 function adminStorageHtml() {
@@ -549,7 +549,7 @@ function adminStorageHtml() {
     `<p><b>Entries loaded:</b> ${KNOWLEDGE.length}<br/><b>Last generated:</b> ${htmlEscape(formatIndiaDateTime(state?.generatedAt))}</p>`,
     '<hr/>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+  ].join(' ');
 }
 
 async function adminSystemHtml(profile = null) {
@@ -559,7 +559,7 @@ async function adminSystemHtml(profile = null) {
     `<p><b>Bot:</b> ${htmlEscape(botUsername(resolvedProfile))}<br/><b>Node:</b> ${htmlEscape(process.version)}<br/><b>Runtime:</b> ${process.env.VERCEL === '1' ? 'Vercel' : 'Serverless/Node'}<br/><b>Knowledge schema:</b> ${htmlEscape(loadCrawlState()?.schemaVersion ?? 'unknown')}<br/><b>Admin IDs configured:</b> ${ADMIN_IDS.size}</p>`,
     '<footer>Runtime information is read-only.</footer>',
     adminRows([[adminButton('↩️ Back', 'adm:home', 'link')]])
-  ].join('\n');
+  ].join(' ');
 }
 
 async function renderAdminPage(page, profile = null) {
@@ -610,7 +610,7 @@ function startMessageHtml(username) {
     '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
     '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
     `<footer>Inline usage: <code>@${htmlEscape(cleanUsername)} your question</code></footer>`
-  ].join('\n');
+  ].join(' ');
 }
 
 function helpMessageHtml(username) {
@@ -623,7 +623,7 @@ function helpMessageHtml(username) {
     '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
     '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
     '<footer>Answers are based on official Telegram documentation.</footer>'
-  ].join('\n');
+  ].join(' ');
 }
 
 function pingMessageHtml(latencyMs) {
@@ -631,7 +631,7 @@ function pingMessageHtml(latencyMs) {
     '<h2>🏓 Pong!</h2>',
     `<p><b>Response time:</b> ${latencyMs} ms</p>`,
     '<footer>Telegram Bot API round-trip latency</footer>'
-  ].join('\n');
+  ].join(' ');
 }
 
 async function handleMessage(update, profile) {
