@@ -1,25 +1,61 @@
 # Sources
 
-The source registry is intentionally curated rather than importing the complete MarshalX Telegram crawler universe.
+> **Source policy**  
+> Curated official Telegram documentation only.  
+> Maintained by **Abhijeet Patil** — `@Religiouskid` · `@Para0x`
 
-## Indexed now
+The source registry is intentionally curated instead of mirroring every page available across Telegram's documentation ecosystem. The goal is a useful Help Desk, not a complete technical archive.
+
+## ◇ Indexed coverage
+
+### User & account help
 
 - `telegram-faq` — general user help.
 - `telegram-faq-spam` — spam limitations and account restrictions.
 - `telegram-faq-premium` — Premium features, payments and channel boosts.
 - `telegram-faq-channels` — channel behavior and management.
+- `telegram-privacy-policy` — privacy and data-handling information.
+
+### Bots & developer help
+
 - `bots-faq` — official bot FAQ.
 - `bots` — bot platform introduction.
 - `bot-features` — bot features and capabilities.
 - `bot-developer-terms` — developer restrictions and requirements.
 - `bot-terms` — user-facing bot terms.
+- `telegram-business` — Telegram Business documentation.
+- `telegram-stars` — Telegram Stars documentation.
+- `telegram-gifts` — Telegram Gifts documentation.
+- Additional configured official documentation covering relevant Telegram features.
 
-## Discovery-only
+## ⟡ Discovery-only sources
 
-- Telegram Blog — current feature announcements and historical feature context.
-- Telegram Evolution — feature/history index.
-- Bot API — developer reference, deliberately excluded from general Help Desk search.
+Some official Telegram pages are useful for discovering new coverage but are intentionally not injected into general Help Desk search.
 
-MarshalX's `telegram-crawler` is treated as a discovery and coverage reference. Its complete tracked-link universe contains many MTProto constructors, API methods and technical pages that would pollute a user Help Desk if indexed wholesale.
+Examples include:
 
-When adding a source, define its audience, category, priority and extraction behavior first. A source is never indexed merely because it is hosted on an official Telegram domain.
+- Telegram Blog — feature announcements and historical context.
+- Telegram Evolution — feature and history index.
+- Bot API reference — highly technical developer reference kept separate from general user-help ranking.
+
+Discovery does **not** mean automatic indexing. A source must first be classified, scoped and tested before it becomes part of the generated knowledge base.
+
+## 🛡 Source admission rules
+
+A new source should have:
+
+- an official Telegram URL
+- a defined audience
+- a category
+- a priority
+- an extraction strategy
+- meaningful content for the Help Desk
+- safe, predictable output under the crawler
+
+A page is never indexed merely because it exists on an official Telegram domain.
+
+## ◌ Guiding principle
+
+**Quality of coverage beats volume of pages.**
+
+The registry should grow when new official Telegram material makes the Help Desk genuinely more useful — not simply because more URLs are available.
