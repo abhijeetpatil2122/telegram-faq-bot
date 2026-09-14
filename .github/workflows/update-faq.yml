@@ -23,8 +23,11 @@ on:
 permissions:
   contents: write
 
+auto_cancel: false
+
 jobs:
   update:
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
