@@ -118,6 +118,7 @@ jobs:
           import fs from 'node:fs';
 
           const summary = JSON.parse(fs.readFileSync('/tmp/crawl-summary.json', 'utf8'));
+          const crawlNumber = process.env.GITHUB_RUN_NUMBER ?? 'Unknown';
 
           function formatIndiaDateTime(value) {
             if (!value) return 'Unknown';
@@ -180,7 +181,7 @@ jobs:
             : '<b>✅ No changes detected</b>';
 
           const html = [
-            '<h2>🔄 Crawl Completed</h2>',
+            `<h2>🔄 Crawl Completed #${crawlNumber}</h2>`,
             `<p>${status}</p>`,
             `<table>${rows.join('')}</table>`
           ].join('');
@@ -206,6 +207,8 @@ jobs:
         run: |
           if [ -z "$BOT_TOKEN" ] || [ -z "$ADMIN_IDS" ]; then exit 0; fi
           node --input-type=module <<'NODE'
+          const crawlNumber = process.env.GITHUB_RUN_NUMBER ?? 'Unknown';
+
           function formatIndiaDateTime(value) {
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return 'Unknown';
@@ -236,7 +239,7 @@ jobs:
           }
 
           const html = [
-            '<h2>🔄 Crawl Failed</h2>',
+            `<h2>🔄 Crawl Failed #${crawlNumber}</h2>`,
             '<p><b>❌ Knowledge crawl failed</b></p>',
             `<table><tr><th>Metric</th><th>Value</th></tr><tr><td>Next crawl</td><td>${formatIndiaDateTime(nextCrawlAt())}</td></tr></table>`,
             '<p>Please check GitHub Actions for details.</p>'
