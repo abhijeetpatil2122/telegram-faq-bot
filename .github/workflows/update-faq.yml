@@ -61,7 +61,7 @@ jobs:
               s, n = re.subn(pattern, replacement, s, count=1)
               if n != 1: raise SystemExit('admin callback block not found')
           s = s.replace("      if (update.callback_query) {\n        const profile = await getBotProfile();\n        await handleAdminCallback(update, profile);\n        return;\n      }", "      if (update.callback_query) {\n        await handleAdminCallback(update);\n        return;\n      }", 1)
-          s = s.replace("].join('\n');", "].join(' ');")
+          s = s.replace("].join('\\n');", "].join(' ');")
           p.write_text(s)
           print('Admin runtime patch applied.')
           PY
@@ -116,10 +116,87 @@ jobs:
           if [ -z "$BOT_TOKEN" ] || [ -z "$ADMIN_IDS" ]; then echo 'BOT_TOKEN or ADMIN_IDS GitHub secret is not configured; skipping crawl notification.'; exit 0; fi
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+
           const summary = JSON.parse(fs.readFileSync('/tmp/crawl-summary.json', 'utf8'));
-          const date = summary.generatedAt ? new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZoneName: 'short' }).format(new Date(summary.generatedAt)) : 'Unknown';
-          const html = summary.changed ? `<h2>🔄 Crawl Completed</h2><p><b>✅ Knowledge base updated</b></p><p>➕ New entries: <b>${summary.added}</b><br/>➖ Removed entries: <b>${summary.removed}</b><br/>✏️ Updated entries: <b>${summary.updated}</b></p><p>📚 Total entries: <b>${summary.total}</b><br/>📦 Sources: <b>${summary.sources}</b><br/>🕘 ${date}</p>` : `<h2>🔄 Crawl Completed</h2><p><b>✅ No changes detected</b></p><p>📚 Entries: <b>${summary.total}</b><br/>📦 Sources: <b>${summary.sources}</b><br/>🕘 ${date}</p>`;
-          for (const chatId of String(process.env.ADMIN_IDS).split(',').map((v) => v.trim()).filter(Boolean)) { const response = await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendRichMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, rich_message: { html }, disable_notification: true }) }); if (!response.ok) console.error(`Notification failed for ${chatId}: HTTP ${response.status} ${await response.text()}`); }
+
+          function formatIndiaDateTime(value) {
+            if (!value) return 'Unknown';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return 'Unknown';
+            return new Intl.DateTimeFormat('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true,
+              timeZoneName: 'short'
+            }).format(date);
+          }
+
+          function nextCrawlAt(base = new Date()) {
+            const next = new Date(base);
+            next.setUTCSeconds(0, 0);
+            next.setUTCMinutes(17);
+            if (next <= base || next.getUTCHours() % 6 !== 0) {
+              do {
+                next.setUTCHours(next.getUTCHours() + 1);
+                next.setUTCMinutes(17, 0, 0);
+              } while (next.getUTCHours() % 6 !== 0);
+            }
+            return next;
+          }
+
+          function tableRow(label, value, header = false) {
+            const tag = header ? 'th' : 'td';
+            return `<tr><${tag}>${label}</${tag}><${tag}>${value}</${tag}></tr>`;
+          }
+
+          const completed = formatIndiaDateTime(summary.generatedAt);
+          const nextCrawl = formatIndiaDateTime(nextCrawlAt());
+          const rows = summary.changed
+            ? [
+                tableRow('Metric', 'Value', true),
+                tableRow('New entries', `<b>${summary.added}</b>`),
+                tableRow('Removed', `<b>${summary.removed}</b>`),
+                tableRow('Updated', `<b>${summary.updated}</b>`),
+                tableRow('Entries', `<b>${summary.total}</b>`),
+                tableRow('Sources', `<b>${summary.sources}</b>`),
+                tableRow('Completed', completed),
+                tableRow('Next crawl', nextCrawl)
+              ]
+            : [
+                tableRow('Metric', 'Value', true),
+                tableRow('Entries', `<b>${summary.total}</b>`),
+                tableRow('Sources', `<b>${summary.sources}</b>`),
+                tableRow('Completed', completed),
+                tableRow('Next crawl', nextCrawl)
+              ];
+
+          const status = summary.changed
+            ? '<b>✅ Knowledge base updated</b>'
+            : '<b>✅ No changes detected</b>';
+
+          const html = [
+            '<h2>🔄 Crawl Completed</h2>',
+            `<p>${status}</p>`,
+            `<table>${rows.join('')}</table>`
+          ].join('');
+
+          for (const chatId of String(process.env.ADMIN_IDS).split(',').map((v) => v.trim()).filter(Boolean)) {
+            const response = await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendRichMessage`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                rich_message: { html },
+                disable_notification: true
+              })
+            });
+            if (!response.ok) console.error(`Notification failed for ${chatId}: HTTP ${response.status} ${await response.text()}`);
+          }
           NODE
       - name: Send crawl failure notification
         if: failure()
@@ -128,6 +205,57 @@ jobs:
           ADMIN_IDS: ${{ secrets.ADMIN_IDS }}
         run: |
           if [ -z "$BOT_TOKEN" ] || [ -z "$ADMIN_IDS" ]; then exit 0; fi
-          for chat_id in $(echo "$ADMIN_IDS" | tr ',' ' '); do
-            curl -fsS --max-time 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendRichMessage" -H 'content-type: application/json' --data "{\"chat_id\":\"${chat_id}\",\"rich_message\":{\"html\":\"<h2>🔄 Crawl Failed</h2><p>❌ The knowledge crawl did not complete successfully.</p><footer>Please check GitHub Actions for details.</footer>\"},\"disable_notification\":true}" || true
-          done
+          node --input-type=module <<'NODE'
+          function formatIndiaDateTime(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return 'Unknown';
+            return new Intl.DateTimeFormat('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true,
+              timeZoneName: 'short'
+            }).format(date);
+          }
+
+          function nextCrawlAt(base = new Date()) {
+            const next = new Date(base);
+            next.setUTCSeconds(0, 0);
+            next.setUTCMinutes(17);
+            if (next <= base || next.getUTCHours() % 6 !== 0) {
+              do {
+                next.setUTCHours(next.getUTCHours() + 1);
+                next.setUTCMinutes(17, 0, 0);
+              } while (next.getUTCHours() % 6 !== 0);
+            }
+            return next;
+          }
+
+          const html = [
+            '<h2>🔄 Crawl Failed</h2>',
+            '<p><b>❌ Knowledge crawl failed</b></p>',
+            `<table><tr><th>Metric</th><th>Value</th></tr><tr><td>Next crawl</td><td>${formatIndiaDateTime(nextCrawlAt())}</td></tr></table>`,
+            '<p>Please check GitHub Actions for details.</p>'
+          ].join('');
+
+          for (const chatId of String(process.env.ADMIN_IDS).split(',').map((v) => v.trim()).filter(Boolean)) {
+            try {
+              const response = await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendRichMessage`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  rich_message: { html },
+                  disable_notification: true
+                })
+              });
+              if (!response.ok) console.error(`Failure notification failed for ${chatId}: HTTP ${response.status} ${await response.text()}`);
+            } catch (error) {
+              console.error(`Failure notification failed for ${chatId}:`, error?.message ?? error);
+            }
+          }
+          NODE
