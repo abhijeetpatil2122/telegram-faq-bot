@@ -1,79 +1,79 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T05:20:04.683Z",
+  "generatedAt": "2026-09-27T12:04:38.688Z",
   "status": "success",
   "sources": {
     "telegram-faq": {
       "items": 90,
-      "hash": "ab6510294b710ad7a59b1825331517bd6154be4eb26dd358b13b6a59b041c837"
+      "hash": "07e4e9de8d943c4aab2346c5a358eaf139f274141a5389aa66692ce55939de5b"
     },
     "telegram-faq-spam": {
       "items": 8,
-      "hash": "8a14c436a24f61ca9e05759a802b72ba3262ed69c54c38f4ff09f77bd87c379d"
+      "hash": "e015eb4169829bb6a5b78b58254cdd8426e17bbf9e33de94925991b690c25db9"
     },
     "telegram-faq-premium": {
       "items": 44,
-      "hash": "85d46940896229486483a30540dead1b033b9c4f5c098a0162fdc7e59f12f106"
+      "hash": "439acea1cd7d243536acb4cab34c6ef193867e50beeb36fcbbe705f20dee9667"
     },
     "telegram-faq-channels": {
       "items": 8,
-      "hash": "583cc0b2712923d57a7b56f0ac0e2f79e81e7cffcf94e86e67ae2f1834fa2bc4"
+      "hash": "8a163cb7c13110e32c08ab5dd4d8395593e81723ac9e52dc2e1d000dc0d87091"
     },
     "telegram-privacy": {
       "items": 65,
-      "hash": "267edd5df74b25e2ecf26118ff4b95a525421c34524eac65d1c581c13e9bcdef"
+      "hash": "2d1c76223a8ec56dd6f238231b5aeb3a91576c8b92073f459582a5b1f95368bb"
     },
     "bots-faq": {
       "items": 13,
-      "hash": "15f22c3528066f2474fd699f47931ea0d0632de5ee28e626a450b6f6477da23b"
+      "hash": "5386382e992260bf8fbe7a1dc25ace39f5b1445cffe4d436e244e3dc73ee1240"
     },
     "bots": {
       "items": 20,
-      "hash": "1e5451ef86b7739a838a6ab7941c421b0e25ff41fb7dfd5bdc1f21100172391d"
+      "hash": "b5cefb8645181ab2c34dd7cb54dc12521ad58ff3dd9a7c872755c8f23147d045"
     },
     "bot-features": {
       "items": 86,
-      "hash": "520e246b3a2282da27389e643c3ee17f7f2b6742219338fe2591cca2e947e429"
+      "hash": "d664483cfeebe66650ae98c4da9201f29182f0e75b2a2cb8965a415da9cec314"
     },
     "bot-developer-terms": {
       "items": 58,
-      "hash": "41595b76a739b7f9805b6d9e81ab1ad283056da103dfdb46080e4803e94bffe5"
+      "hash": "e9007c29c61c395e836f59d3a57432449f76874aa4549be80bce89228b3f2fcf"
     },
     "bot-terms": {
       "items": 19,
-      "hash": "b0ead9dff222e9a140ffb0929da0bc263642fee1c451e4df6ea68a111301266a"
+      "hash": "1ae8c74a6193bd24e0562d103082f73e3ae04d7cf30ca7245ebae97ddfbf1828"
     },
     "telegram-business": {
       "items": 33,
-      "hash": "8bfafab9a52fba1726431fd96fde6d66db2ea2417d35385ae163567dc89dfcd3"
+      "hash": "9bafb4492d1d2468872187c49e1b7a74023323e2f0414c563f866b24be09ecc7"
     },
     "telegram-stars": {
       "items": 9,
-      "hash": "7fba6459c68caec2dc45c0ad07b0516d127ed045966848de62274a664b31356c"
+      "hash": "e3fd6b8b16bae529f4c18e03acf7abfb78ce4e97f4f9731f46a4210a6fe77db0"
     },
     "telegram-gifts": {
       "items": 10,
-      "hash": "241d93acc58fb17df8e3fd037654b5675f56af6fff54f0bcd291bfa6ab9e19b2"
+      "hash": "a13740034d43a817f5fe858dcf1cd7ef12434590e95918886c2f3b760bb62e6a"
     },
     "telegram-gift-marketplace": {
       "items": 11,
-      "hash": "c0fcd44a568a218e73d813b054afa636cf876003c4350e128b9632c31a55d2e4"
+      "hash": "90db63b873baa45e930f746934c011dbfd3688717ab1ef5e94b4519294585c8f"
     },
     "telegram-stories": {
       "items": 11,
-      "hash": "67715a419ab960d6ddf3f77eaf314c5554e37270b7f7e7574bcd5853e72ec0ff"
+      "hash": "79ea6457441f3cd9039f2f2639159efe3a440160e7e2bd5b12f595bfdc4ae168"
     },
     "telegram-live-stories": {
       "items": 10,
-      "hash": "b7392691e7e39af393bdf226902bcfb19b9ae45c0535830c4ee60b59c1a66356"
+      "hash": "ed38a619aa1ad428a150f088d09cefd88e766584c813a3afc36877e142c61e76"
     },
     "telegram-search": {
       "items": 11,
-      "hash": "02a4d338e9db14d076164c0c5d0cb6ebbc1aaa5f633d56393fa04cc0dbaafb94"
+      "hash": "91183d51448e6daba55e5d086c38ac05930971eaed81caac67ac46c67e212351"
     },
     "telegram-communities": {
       "items": 9,
-      "hash": "cb04abd2e9025abb7892ad4cb3c7515141f06083e8c0b6808b4e68600bda0923"
+      "hash": "51ed95d6060ff6484b247aefe31ea5027b3e1a9d15f038dc6663d94cb77c03b8"
     }
   },
   "totalItems": 515,
