@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-10-09T13:19:19.217Z",
+  "generatedAt": "2026-10-09T22:39:44.327Z",
   "generator": "scripts/crawl/index.mjs",
   "sources": [
     {
@@ -28797,14 +28797,10 @@
         "media",
         "files",
         "links",
-        "shared",
-        "also",
-        "used",
-        "export",
-        "data"
+        "shared"
       ],
-      "answer": "One is our app for macOS, the other is Telegram Lite, the macOS version of our multi-platform client. Both apps are official. Both started out as unofficial applications by two different developers and vary in design and functionality. Telegram for macOS supports many platform-specific features, such as the MacBook Pro Touch Bar, gesture navigation, integration with the Mac's Share menu and more. It has every feature from the iOS version of the app including Secret Chats. Telegram Lite is a lightning-fast app, optimized for work-related tasks and handling large communities. It offers a three-column interface, perfect for multitasking and quick access to media, files and links shared in your chats. This app can also be used to export your Telegram data and chats.",
-      "answer_html": "<p>One is our <a href=\"https://macos.telegram.org/\">app for macOS</a>, the other is Telegram Lite, the macOS version of our <a href=\"https://desktop.telegram.org/\">multi-platform client</a>. Both apps are official. Both started out as unofficial applications by two different developers and vary in design and functionality.</p>\n<p><a href=\"https://macos.telegram.org/\">Telegram for macOS</a> supports many platform-specific features, such as the MacBook Pro Touch Bar, gesture navigation, integration with the Mac&apos;s Share menu and more. It has every feature from the iOS version of the app including Secret Chats.</p>\n<p><a href=\"https://desktop.telegram.org/\">Telegram Lite</a> is a lightning-fast app, optimized for work-related tasks and handling large communities. It offers a three-column interface, perfect for multitasking and quick access to media, files and links shared in your chats. This app can also be used to <a href=\"https://telegram.org/blog/export-and-more\">export your Telegram data and chats</a>.</p>",
+      "answer": "One is our app for macOS, the other is Telegram Lite, the macOS version of our multi-platform client. Both apps are official. Both started out as unofficial applications by two different developers and vary in design and functionality. Telegram for macOS supports many platform-specific features, such as the MacBook Pro Touch Bar, gesture navigation, integration with the Mac's Share menu and more. It has every feature from the iOS version of the app including Secret Chats. Telegram Lite is a lightning-fast app, optimized for work-related tasks and handling large communities. It offers a three-column interface, perfect for multitasking and quick access to media, files and links shared in your chats.",
+      "answer_html": "<p>One is our <a href=\"https://macos.telegram.org/\">app for macOS</a>, the other is Telegram Lite, the macOS version of our <a href=\"https://desktop.telegram.org/\">multi-platform client</a>. Both apps are official. Both started out as unofficial applications by two different developers and vary in design and functionality.</p>\n<p><a href=\"https://macos.telegram.org/\">Telegram for macOS</a> supports many platform-specific features, such as the MacBook Pro Touch Bar, gesture navigation, integration with the Mac&apos;s Share menu and more. It has every feature from the iOS version of the app including Secret Chats.</p>\n<p><a href=\"https://desktop.telegram.org/\">Telegram Lite</a> is a lightning-fast app, optimized for work-related tasks and handling large communities. It offers a three-column interface, perfect for multitasking and quick access to media, files and links shared in your chats.</p>",
       "source": {
         "id": "telegram-faq",
         "title": "Telegram FAQ",
