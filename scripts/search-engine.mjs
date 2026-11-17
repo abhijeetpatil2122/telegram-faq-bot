@@ -98,7 +98,7 @@ function score(item, query) {
   if (item.type === 'faq' && detectedIntents.size && fields.audience === 'developer') points += 35;
   const developerIntent = baseTokens.some((token) => DEV_INTENT.has(token)) || detectedIntents.has('developer');
   if (developerIntent && fields.audience === 'developer') points += 55; if (!developerIntent && fields.audience === 'developer') points -= 8;
-  points += intentScore(detectedIntents, fields); points += Math.round(sourcePriority(item) * 0.35); return points;
+  if (item.type === 'faq') points += 60;\n  if (uniqueTokenCount >= 3 && matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 160;\n  points += intentScore(detectedIntents, fields); points += Math.round(sourcePriority(item) * 0.35); return points;
 }
 function containsPhraseAny(field, variants) { return variants.some((variant) => phrasePresent(field, variant)); }
 function effectiveMinScore(query, configured) { const base = Number.isFinite(Number(configured)) ? Number(configured) : 24; const count = queryTokens(query).length; if (count <= 1) return Math.max(18, base - 6); if (count === 2) return Math.max(20, base - 3); if (count >= 4) return base + 8; return base; }
