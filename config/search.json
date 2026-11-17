@@ -38,7 +38,9 @@
       "web apps",
       "telegram mini app",
       "mini app terms",
-      "mini apps terms"
+      "mini apps terms",
+      "terms for telegram mini apps",
+      "telegram mini apps terms"
     ],
     "premium": [
       "telegram premium",
@@ -103,6 +105,17 @@
       "creator terms",
       "creator rewards",
       "channel monetization"
+    ],
+    "content licensing": [
+      "content scraping",
+      "scraping telegram content",
+      "ai model training",
+      "training an ai model",
+      "using telegram content for ai"
+    ],
+    "business subscription": [
+      "telegram business subscriptions",
+      "business subscription terms"
     ]
   },
   "termAliases": {
@@ -273,7 +286,9 @@
       "business",
       "telegram business",
       "business account",
-      "automated accounts"
+      "automated accounts",
+      "telegram business subscriptions",
+      "business subscription terms"
     ],
     "STARS": [
       "stars",
@@ -331,7 +346,10 @@
       "mini apps",
       "mini app terms",
       "mini apps terms",
-      "third-party mini apps"
+      "third-party mini apps",
+      "terms for telegram mini apps",
+      "telegram mini apps terms",
+      "mini apps terms of service"
     ],
     "SUPPORT": [
       "support",
@@ -353,7 +371,12 @@
       "content licensing",
       "ai scraping",
       "user guidance",
-      "digital services act"
+      "digital services act",
+      "scrape telegram public content",
+      "train an ai model",
+      "ai model training",
+      "content scraping",
+      "content licensing terms"
     ],
     "NEWS": [
       "new feature",
