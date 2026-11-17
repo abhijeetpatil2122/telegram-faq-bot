@@ -21,7 +21,7 @@
 
 ## ◈ What this project is
 
-**Telegram Help Desk** is a serverless documentation system for Telegram users and bot developers.
+**Telegram Help Desk** is a serverless FAQ system for ordinary Telegram users. It answers questions about using Telegram, its features, account settings, privacy, communities, media and subscriptions.
 
 It maintains a curated, versioned knowledge dataset from official Telegram sources, indexes that dataset with deterministic search, and presents supported answers as Telegram **Rich Messages** with the original source attached.
 
@@ -178,7 +178,7 @@ If the indexed official material cannot support a question, the correct response
 
 ## ⌁ Source policy
 
-The source registry is intentionally curated. Being hosted on an official Telegram domain does not automatically make a page suitable for general Help Desk indexing.
+The source registry is intentionally curated. Being hosted on an official Telegram domain does not automatically make a page suitable for general user FAQ indexing. Developer documentation is explicitly out of scope.
 
 ### Indexed coverage
 
@@ -190,14 +190,11 @@ The source registry is intentionally curated. Being hosted on an official Telegr
 - Telegram Channels FAQ
 - Telegram Privacy Policy
 
-**Bots & developer help**
+**Telegram user features**
 
 - Bots FAQ
 - Bots introduction
-- Telegram Bot Features
-- Telegram Bot Developer Terms
-- Telegram Bot Terms
-- Telegram Business
+- User-facing Telegram feature announcements discovered from the official Blog
 - Telegram Stars
 - Telegram Gifts
 - Gift Marketplace
