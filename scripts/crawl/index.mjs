@@ -98,7 +98,9 @@ function makeItem(source, heading, answerHtml, section, index) {
   const answer = plain(safeHtml);
   if (answer.length < 20) return null;
   const title = heading.text;
-  return { id: safeId(source.id, title, section, index), type: source.kind, category: source.category, title, question: title, section, aliases: aliasesFor(title, section, source.category), keywords: keywordsFor(title, answer, section, source.category), answer, answer_html: safeHtml, source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } };
+  const inferredCategory = source.category === 'USER_HELP' ? categoryForAnnouncement(`${title} ${section ?? ''}`) : source.category;
+  const category = inferredCategory === 'NEWS' ? source.category : inferredCategory;
+  return { id: safeId(source.id, title, section, index), type: source.kind, category, title, question: title, section, aliases: aliasesFor(title, section, category), keywords: keywordsFor(title, answer, section, category), answer, answer_html: safeHtml, source: { id: source.id, title: source.title, url: source.url }, metadata: { official: true, audience: source.audience, priority: source.priority } };
 }
 
 function extractFaq(nodes, $, source, questionMode = 'q') {
