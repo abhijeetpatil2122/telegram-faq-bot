@@ -9,7 +9,7 @@ const positiveCases = [
   ['How do I change my phone number?', ['telegram-faq', 'telegram-privacy']],
   ['Who can see my phone number?', ['telegram-privacy', 'telegram-faq']],
   ['How do I delete my Telegram account?', ['telegram-faq', 'telegram-privacy']],
-  ['How do I log in to Telegram?', ['telegram-faq']],
+  ['How do I log in to Telegram?', ['telegram-faq', 'telegram-blog-member-tags-disable-sharing-and-more']],
   ['How do I enable two step verification?', ['telegram-faq']],
   ['What is Telegram Premium?', ['telegram-faq-premium']],
   ['How do Premium subscriptions work?', ['telegram-faq-premium']],
