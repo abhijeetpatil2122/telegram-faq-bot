@@ -217,7 +217,7 @@ async function discoverUserAnnouncements() {
     let url;
     try { url = new URL(raw, listing.url); } catch { return; }
     if (!['telegram.org', 'www.telegram.org'].includes(url.hostname)) return;
-    if (!/^\\/blog\\/[a-z0-9][a-z0-9-]*\\/?$/i.test(url.pathname)) return;
+    if (!/^\/blog\/[a-z0-9][a-z0-9-]*\/?$/i.test(url.pathname)) return;
     const slug = url.pathname.split('/').filter(Boolean).at(-1);
     if (!slug || ['blog'].includes(slug)) return;
     const anchorTitle = cleanTitle(anchor.text());
