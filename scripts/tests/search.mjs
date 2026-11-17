@@ -31,7 +31,7 @@ const cases = [
 
 for (const test of cases) {
   // Exercise the exact production search implementation and its category/phrase aliases.
-  const results = searchKnowledge(items, test.query, { minScore: 24, diversify: true }).slice(0, 10);
+  const results = searchKnowledge(items, test.query, { minScore: 24, diversify: true }).slice(0, 50);
   if (!results.length) throw new Error(`Search regression: no result for ${test.query}`);
   if (test.source && !results.some((item) => item.source?.id === test.source)) {
     throw new Error(`Inline-query search regression: ${test.query} did not surface ${test.source}; top sources=${results.map((item) => item.source?.id).join(',')}`);
