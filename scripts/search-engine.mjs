@@ -86,6 +86,7 @@ function score(item, query) {
   points += matchedPrimary * 90 + matchedTitle * 65 + matchedSection * 35 + matchedSourceTitle * 55 + matchedAliases * 45 + matchedKeywords * 20;
   if (matchedPrimary === uniqueTokenCount) points += 260; else if (matchedPrimary >= Math.max(1, uniqueTokenCount - 1)) points += 100;
   const matchedAny = baseTokens.filter((token) => allSearchFields.some((field) => tokenSet(field).has(token))).length;
+  if (uniqueTokenCount >= 3 && matchedAny < 2) return 0;
   if (matchedAny === uniqueTokenCount) points += 120; else if (matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 35;
   const fieldCoverages = [fields.question, fields.title, fields.section, fields.sourceTitle, ...fields.aliases, ...fields.keywords].map((field) => coverage(baseTokens, field));
   const bestFieldCoverage = Math.max(0, ...fieldCoverages);
@@ -98,6 +99,8 @@ function score(item, query) {
   if (item.type === 'faq' && detectedIntents.size && fields.audience === 'developer') points += 35;
   const developerIntent = baseTokens.some((token) => DEV_INTENT.has(token)) || detectedIntents.has('developer');
   if (developerIntent && fields.audience === 'developer') points += 55; if (!developerIntent && fields.audience === 'developer') points -= 8;
+  if (item.type === 'faq') points += 60;
+  if (uniqueTokenCount >= 3 && matchedAny < Math.ceil(uniqueTokenCount / 2)) points -= 160;
   points += intentScore(detectedIntents, fields); points += Math.round(sourcePriority(item) * 0.35); return points;
 }
 function containsPhraseAny(field, variants) { return variants.some((variant) => phrasePresent(field, variant)); }

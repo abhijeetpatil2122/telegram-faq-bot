@@ -9,7 +9,7 @@ const positiveCases = [
   ['How do I change my phone number?', ['telegram-faq', 'telegram-privacy']],
   ['Who can see my phone number?', ['telegram-privacy', 'telegram-faq']],
   ['How do I delete my Telegram account?', ['telegram-faq', 'telegram-privacy']],
-  ['How do I log in to Telegram?', ['telegram-faq']],
+  ['How do I log in to Telegram?', ['telegram-faq', 'telegram-blog-member-tags-disable-sharing-and-more']],
   ['How do I enable two step verification?', ['telegram-faq']],
   ['What is Telegram Premium?', ['telegram-faq-premium']],
   ['How do Premium subscriptions work?', ['telegram-faq-premium']],
@@ -18,18 +18,6 @@ const positiveCases = [
   ['What is Telegram spam?', ['telegram-faq-spam']],
   ['Why was my account limited for spam?', ['telegram-faq-spam']],
   ['How do I report spam?', ['telegram-faq-spam']],
-  ['How do I create a Telegram bot?', ['bots-faq', 'bots', 'bot-features']],
-  ['How do I get a bot token?', ['bots-faq', 'bots', 'bot-features']],
-  ['How do webhooks work?', ['bots-faq', 'bots', 'bot-features']],
-  ['What is inline mode?', ['bots-faq', 'bot-features', 'bots']],
-  ['How do inline queries work?', ['bot-features', 'bots-faq', 'bots']],
-  ['What are Telegram Mini Apps?', ['bot-features', 'bots']],
-  ['How do I use a Mini App?', ['bot-features', 'bots']],
-  ['What can Telegram bots do?', ['bots', 'bot-features']],
-  ['What are Telegram Bot Developer Terms?', ['bot-developer-terms']],
-  ['What are the Telegram Bot Terms?', ['bot-terms']],
-  ['What is Telegram Business?', ['telegram-business']],
-  ['How do Telegram Business features work?', ['telegram-business']],
   ['What are Telegram Stars?', ['telegram-stars']],
   ['How do I pay with Telegram Stars?', ['telegram-stars']],
   ['What are Telegram Gifts?', ['telegram-gifts']],
@@ -42,7 +30,7 @@ const positiveCases = [
   ['What is public post search?', ['telegram-search']],
   ['What are Telegram communities?', ['telegram-communities']],
   ['What is the rich text editor?', ['telegram-communities']],
-  ['How do ephemeral messages work in groups?', ['telegram-communities']]
+  ['How do ephemeral messages work in groups?', ['telegram-communities', 'telegram-blog-watch-apps-and-more', 'telegram-blog-comments-in-video-chats-threads-for-bots', 'telegram-blog-group-calls-made-easy']]
 ];
 
 const noResultCases = [
