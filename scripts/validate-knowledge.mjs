@@ -11,16 +11,19 @@ if (!Array.isArray(data.sources) || data.sources.length < 1) throw new Error('No
 if (!Array.isArray(data.items) || data.items.length < 1) throw new Error('Knowledge dataset is empty');
 
 const sourceIds = new Set(data.sources.map((source) => source.id));
-const configured = new Set(config.sources.filter((source) => source.enabled && source.index).map((source) => source.id));
+const configured = new Set(config.sources.filter((source) => source.enabled && source.index && source.audience === 'user').map((source) => source.id));
+const isDiscoveredUserSource = (source) => source?.id?.startsWith('telegram-blog-') && /^https:\/\/telegram\.org\/blog\/[a-z0-9-]+\/?$/i.test(source.url ?? '') && source.audience === 'user' && source.kind === 'guide';
 const ids = new Set();
 const questions = new Set();
 const allowedTags = new Set(['a','b','strong','i','em','u','ins','s','strike','del','code','mark','sub','sup','tg-spoiler','tg-reference','tg-emoji','tg-time','tg-math','h1','h2','h3','h4','h5','h6','p','pre','footer','hr','ul','ol','li','blockquote','aside','figure','figcaption','cite','table','caption','tr','th','td','details','summary','input']);
 
 for (const id of configured) if (!sourceIds.has(id)) throw new Error(`Configured source missing from dataset: ${id}`);
+for (const source of data.sources) if (!configured.has(source.id) && !isDiscoveredUserSource(source)) throw new Error(`Unapproved source in dataset: ${source.id}`);
 for (const item of data.items) {
   if (!item.id || ids.has(item.id)) throw new Error(`Duplicate/missing item id: ${item.id ?? '(missing)'}`);
   if (!item.title || !item.question || !item.answer || !item.answer_html) throw new Error(`Incomplete item: ${item.id}`);
   if (!item.source?.id || !sourceIds.has(item.source.id)) throw new Error(`Invalid source for ${item.id}`);
+  if (item.metadata?.audience !== 'user') throw new Error(`Non-user knowledge is not allowed in this FAQ dataset: ${item.id}`);
   if (!item.source.url?.startsWith('https://')) throw new Error(`Invalid source URL for ${item.id}`);
   if (item.answer.length < 20 || item.answer_html.length < 20) throw new Error(`Answer too short for ${item.id}`);
   if (data.schemaVersion >= 3 && !item.category) throw new Error(`Missing category for ${item.id}`);
