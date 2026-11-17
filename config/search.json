@@ -36,7 +36,9 @@
       "mini apps",
       "web app",
       "web apps",
-      "telegram mini app"
+      "telegram mini app",
+      "mini app terms",
+      "mini apps terms"
     ],
     "premium": [
       "telegram premium",
@@ -88,6 +90,19 @@
       "remove account",
       "close account",
       "deactivate account"
+    ],
+    "terms of service": [
+      "terms",
+      "tos",
+      "terms and conditions",
+      "usage rules",
+      "telegram rules",
+      "user terms"
+    ],
+    "content creator": [
+      "creator terms",
+      "creator rewards",
+      "channel monetization"
     ]
   },
   "termAliases": {
@@ -146,6 +161,11 @@
       "gifts",
       "collectible gift",
       "collectible gifts"
+    ],
+    "tos": [
+      "terms of service",
+      "terms and conditions",
+      "usage rules"
     ]
   },
   "intentPatterns": {
@@ -320,7 +340,16 @@
       "policy",
       "rules",
       "legal",
-      "restriction"
+      "restriction",
+      "terms of service",
+      "terms and conditions",
+      "tos",
+      "acceptable use",
+      "prohibited activities",
+      "content licensing",
+      "ai scraping",
+      "user guidance",
+      "digital services act"
     ],
     "NEWS": [
       "new feature",
