@@ -3,8 +3,12 @@
   "version": "0.4.1",
   "private": true,
   "type": "module",
-  "engines": {"node": "24.x"},
-  "dependencies": {"cheerio": "1.2.0"},
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "cheerio": "1.2.0"
+  },
   "scripts": {
     "postinstall": "node scripts/admin-source-diagnostics.mjs",
     "dev": "node --watch api/telegram.js",
@@ -14,6 +18,7 @@
     "search:engine:test": "node scripts/tests/search-engine.mjs",
     "search:benchmark": "node scripts/tests/search-benchmark.mjs",
     "runtime:test": "node scripts/tests/runtime.mjs",
-    "check": "node scripts/admin-source-diagnostics.mjs && node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs"
+    "check": "node scripts/admin-source-diagnostics.mjs && node --check api/telegram.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs && node --check scripts/tests/source-policy.mjs && npm run source-policy:test",
+    "source-policy:test": "node scripts/tests/source-policy.mjs"
   }
 }
