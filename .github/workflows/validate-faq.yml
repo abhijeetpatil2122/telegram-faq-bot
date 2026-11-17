@@ -1,0 +1,41 @@
+name: Validate Telegram FAQ Changes
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/telegram.js'
+      - 'scripts/**'
+      - 'config/**'
+      - 'package.json'
+      - '.github/workflows/**'
+      - 'data/knowledge.json'
+      - 'data/crawl-state.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Validate source policy and code
+        run: npm run check
+      - name: Runtime hardening tests
+        run: npm run runtime:test
+      - name: Build fresh knowledge from official sources
+        run: npm run crawl
+      - name: Validate generated knowledge and Rich HTML
+        run: npm run validate
+      - name: Search regression tests
+        run: npm run search:test
+      - name: Search quality benchmark
+        run: npm run search:benchmark
