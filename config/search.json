@@ -1,63 +1,332 @@
 {
   "schemaVersion": 2,
   "phraseAliases": {
-    "phone number": ["mobile number", "telephone number", "my number", "number privacy"],
-    "two step verification": ["2fa", "two factor authentication", "two-step verification", "two step password"],
-    "username": ["user name", "handle"],
-    "inline mode": ["inline bot", "inline query", "inline search"],
-    "webhook": ["web hook", "webhook url", "bot webhook"],
-    "bot token": ["token", "bot api token", "authentication token"],
-    "mini app": ["mini apps", "web app", "web apps", "telegram mini app"],
-    "premium": ["telegram premium", "premium subscription", "premium account"],
-    "stars": ["telegram stars", "star payments", "xtr", "stars payment"],
-    "gift": ["gifts", "collectible gift", "collectible gifts"],
-    "story": ["stories", "telegram story", "story feature"],
-    "channel": ["channels", "broadcast channel"],
-    "group": ["groups", "supergroup", "group chat"],
-    "privacy": ["privacy settings", "private", "privacy controls"],
-    "spam": ["spam report", "spam restriction", "spammer"],
-    "login": ["sign in", "signin", "account access", "log in"],
-    "delete account": ["remove account", "close account", "deactivate account"]
+    "phone number": [
+      "mobile number",
+      "telephone number",
+      "my number",
+      "number privacy"
+    ],
+    "two step verification": [
+      "2fa",
+      "two factor authentication",
+      "two-step verification",
+      "two step password"
+    ],
+    "username": [
+      "user name",
+      "handle"
+    ],
+    "inline mode": [
+      "inline bot",
+      "inline query",
+      "inline search"
+    ],
+    "webhook": [
+      "web hook",
+      "webhook url",
+      "bot webhook"
+    ],
+    "bot token": [
+      "token",
+      "bot api token",
+      "authentication token"
+    ],
+    "mini app": [
+      "mini apps",
+      "web app",
+      "web apps",
+      "telegram mini app"
+    ],
+    "premium": [
+      "telegram premium",
+      "premium subscription",
+      "premium account"
+    ],
+    "stars": [
+      "telegram stars",
+      "star payments",
+      "xtr",
+      "stars payment"
+    ],
+    "gift": [
+      "gifts",
+      "collectible gift",
+      "collectible gifts"
+    ],
+    "story": [
+      "stories",
+      "telegram story",
+      "story feature"
+    ],
+    "channel": [
+      "channels",
+      "broadcast channel"
+    ],
+    "group": [
+      "groups",
+      "supergroup",
+      "group chat"
+    ],
+    "privacy": [
+      "privacy settings",
+      "private",
+      "privacy controls"
+    ],
+    "spam": [
+      "spam report",
+      "spam restriction",
+      "spammer"
+    ],
+    "login": [
+      "sign in",
+      "signin",
+      "account access",
+      "log in"
+    ],
+    "delete account": [
+      "remove account",
+      "close account",
+      "deactivate account"
+    ]
   },
   "termAliases": {
-    "telegram": ["tg"],
-    "developer": ["dev", "devs", "developer docs"],
-    "message": ["msg", "msgs"],
-    "private chat": ["dm", "direct message", "direct messages"],
-    "supergroup": ["super group", "super-group"],
-    "bot api": ["botapi", "bot api docs"],
-    "mini app": ["miniapp", "mini-app", "web app", "webapp"],
-    "two factor authentication": ["2fa", "2 factor", "two-factor", "two factor auth"],
-    "username": ["user name", "user-name", "handle"],
-    "webhook": ["web hook", "web-hook"],
-    "stars": ["xtr", "star payments", "telegram stars"],
-    "gift": ["gifts", "collectible gift", "collectible gifts"]
+    "telegram": [
+      "tg"
+    ],
+    "developer": [
+      "dev",
+      "devs",
+      "developer docs"
+    ],
+    "message": [
+      "msg",
+      "msgs"
+    ],
+    "private chat": [
+      "dm",
+      "direct message",
+      "direct messages"
+    ],
+    "supergroup": [
+      "super group",
+      "super-group"
+    ],
+    "bot api": [
+      "botapi",
+      "bot api docs"
+    ],
+    "mini app": [
+      "miniapp",
+      "mini-app",
+      "web app",
+      "webapp"
+    ],
+    "two factor authentication": [
+      "2fa",
+      "2 factor",
+      "two-factor",
+      "two factor auth"
+    ],
+    "username": [
+      "user name",
+      "user-name",
+      "handle"
+    ],
+    "webhook": [
+      "web hook",
+      "web-hook"
+    ],
+    "stars": [
+      "xtr",
+      "star payments",
+      "telegram stars"
+    ],
+    "gift": [
+      "gifts",
+      "collectible gift",
+      "collectible gifts"
+    ]
   },
   "intentPatterns": {
-    "how_to": ["how to", "how do i", "how can i", "steps", "set up", "configure", "enable", "disable", "create"],
-    "definition": ["what is", "what are", "what does", "meaning", "define", "about"],
-    "troubleshooting": ["why", "not working", "doesn't work", "does not work", "cannot", "can't", "failed", "error", "problem", "issue", "stuck", "missing"],
-    "privacy": ["privacy", "private", "hide my", "who can see", "visible to"],
-    "developer": ["api", "bot", "token", "webhook", "inline", "mini app", "code", "developer", "payload", "json", "callback"]
+    "how_to": [
+      "how to",
+      "how do i",
+      "how can i",
+      "steps",
+      "set up",
+      "configure",
+      "enable",
+      "disable",
+      "create"
+    ],
+    "definition": [
+      "what is",
+      "what are",
+      "what does",
+      "meaning",
+      "define",
+      "about"
+    ],
+    "troubleshooting": [
+      "why",
+      "not working",
+      "doesn't work",
+      "does not work",
+      "cannot",
+      "can't",
+      "failed",
+      "error",
+      "problem",
+      "issue",
+      "stuck",
+      "missing"
+    ],
+    "privacy": [
+      "privacy",
+      "private",
+      "hide my",
+      "who can see",
+      "visible to"
+    ],
+    "developer": [
+      "api",
+      "bot",
+      "token",
+      "webhook",
+      "inline",
+      "mini app",
+      "code",
+      "developer",
+      "payload",
+      "json",
+      "callback"
+    ]
   },
   "categoryAliases": {
-    "ACCOUNT": ["account access", "login", "sign in", "phone number", "sessions"],
-    "SECURITY": ["spam", "scam", "abuse", "report", "account safety"],
-    "PRIVACY": ["privacy", "private", "phone number", "data", "security settings"],
-    "PREMIUM": ["premium", "subscription", "telegram premium"],
-    "CHANNELS": ["channel", "channels", "broadcast", "subscribers"],
-    "GROUPS": ["group", "groups", "supergroup", "admins", "moderation"],
-    "COMMUNITIES": ["community", "communities", "group", "connected spaces"],
-    "BUSINESS": ["business", "telegram business", "business account", "automated accounts"],
-    "STARS": ["stars", "telegram stars", "paid messages", "payments", "monetization"],
-    "GIFTS": ["gift", "gifts", "collectible gifts", "gift marketplace"],
-    "MEDIA": ["photo", "video", "file", "media", "gif", "voice"],
-    "CALLS": ["call", "calls", "voice call", "video call", "group call"],
-    "STORIES": ["story", "stories", "live story", "story album"],
-    "SEARCH": ["search", "find", "discover", "discovery", "public posts"],
-    "BOTS": ["bot", "bots", "inline", "webhook", "mini app", "bot api"],
-    "SUPPORT": ["support", "report", "help", "appeal"],
-    "LEGAL": ["terms", "policy", "rules", "legal", "restriction"],
-    "NEWS": ["new feature", "update", "announcement", "latest feature"]
+    "ACCOUNT": [
+      "account access",
+      "login",
+      "sign in",
+      "phone number",
+      "sessions"
+    ],
+    "SECURITY": [
+      "spam",
+      "scam",
+      "abuse",
+      "report",
+      "account safety"
+    ],
+    "PRIVACY": [
+      "privacy",
+      "private",
+      "phone number",
+      "data",
+      "security settings"
+    ],
+    "PREMIUM": [
+      "premium",
+      "subscription",
+      "telegram premium"
+    ],
+    "CHANNELS": [
+      "channel",
+      "channels",
+      "broadcast",
+      "subscribers"
+    ],
+    "GROUPS": [
+      "group",
+      "groups",
+      "supergroup",
+      "admins",
+      "moderation"
+    ],
+    "COMMUNITIES": [
+      "community",
+      "communities",
+      "group",
+      "connected spaces"
+    ],
+    "BUSINESS": [
+      "business",
+      "telegram business",
+      "business account",
+      "automated accounts"
+    ],
+    "STARS": [
+      "stars",
+      "telegram stars",
+      "paid messages",
+      "payments",
+      "monetization"
+    ],
+    "GIFTS": [
+      "gift",
+      "gifts",
+      "collectible gifts",
+      "gift marketplace",
+      "send a gift",
+      "sending gifts",
+      "give a gift",
+      "gift someone",
+      "send gifts"
+    ],
+    "MEDIA": [
+      "photo",
+      "video",
+      "file",
+      "media",
+      "gif",
+      "voice"
+    ],
+    "CALLS": [
+      "call",
+      "calls",
+      "voice call",
+      "video call",
+      "group call"
+    ],
+    "STORIES": [
+      "story",
+      "stories",
+      "live story",
+      "story album"
+    ],
+    "SEARCH": [
+      "search",
+      "find",
+      "discover",
+      "discovery",
+      "public posts"
+    ],
+    "BOTS": [
+      "bot",
+      "bots",
+      "inline",
+      "webhook",
+      "mini app",
+      "bot api"
+    ],
+    "SUPPORT": [
+      "support",
+      "report",
+      "help",
+      "appeal"
+    ],
+    "LEGAL": [
+      "terms",
+      "policy",
+      "rules",
+      "legal",
+      "restriction"
+    ],
+    "NEWS": [
+      "new feature",
+      "update",
+      "announcement",
+      "latest feature"
+    ]
   }
 }
