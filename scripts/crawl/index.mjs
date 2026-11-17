@@ -152,16 +152,34 @@ function extract(html, source) {
 }
 
 async function fetchSource(source) {
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), crawlerConfig.requestTimeoutMs);
-  try {
-    const res = await fetch(source.url, { headers: { 'user-agent': crawlerConfig.userAgent, accept: 'text/html,application/xhtml+xml' }, signal: controller.signal, redirect: 'follow' });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    const length = Number(res.headers.get('content-length') || 0);
-    if (length && length > crawlerConfig.maxSourceBytes) throw new Error(`source exceeds ${crawlerConfig.maxSourceBytes} bytes`);
-    const html = await res.text();
-    if (Buffer.byteLength(html, 'utf8') > crawlerConfig.maxSourceBytes) throw new Error(`source exceeds ${crawlerConfig.maxSourceBytes} bytes`);
-    return html;
-  } finally { clearTimeout(timer); }
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), crawlerConfig.requestTimeoutMs);
+    try {
+      const res = await fetch(source.url, { headers: { 'user-agent': crawlerConfig.userAgent, accept: 'text/html,application/xhtml+xml' }, signal: controller.signal, redirect: 'follow' });
+      if (!res.ok) {
+        const error = new Error(`${res.status} ${res.statusText}`);
+        error.status = res.status;
+        throw error;
+      }
+      const length = Number(res.headers.get('content-length') || 0);
+      if (length && length > crawlerConfig.maxSourceBytes) throw new Error(`source exceeds ${crawlerConfig.maxSourceBytes} bytes`);
+      const html = await res.text();
+      if (Buffer.byteLength(html, 'utf8') > crawlerConfig.maxSourceBytes) throw new Error(`source exceeds ${crawlerConfig.maxSourceBytes} bytes`);
+      return html;
+    } catch (error) {
+      lastError = error;
+      const permanentClientError = Number(error?.status) >= 400 && Number(error?.status) < 500 && ![408, 425, 429].includes(Number(error.status));
+      if (attempt >= 3 || permanentClientError) break;
+      const delay = 750 * (2 ** (attempt - 1));
+      console.warn(`Fetch attempt ${attempt}/3 failed for ${source.id}: ${error.message}; retrying in ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError ?? new Error(`Unable to fetch ${source.id}`);
 }
 
 function categoryForAnnouncement(title = '') {
@@ -200,7 +218,8 @@ async function discoverUserAnnouncements() {
     if (!/^\\/blog\\/[a-z0-9][a-z0-9-]*\\/?$/i.test(url.pathname)) return;
     const slug = url.pathname.split('/').filter(Boolean).at(-1);
     if (!slug || ['blog'].includes(slug)) return;
-    const title = cleanTitle(anchor.text()) || slug.replace(/-/g, ' ');
+    const anchorTitle = cleanTitle(anchor.text());
+    const title = !anchorTitle || /^(read more|learn more|more|details|continue)$/i.test(anchorTitle) ? slug.replace(/-/g, ' ') : anchorTitle;
     if (title.length < 8 || /bot api|api changelog|mtproto|developer documentation|api updates/i.test(title)) return;
     const canonical = `https://telegram.org/blog/${slug}`;
     if (!candidates.has(canonical)) candidates.set(canonical, { id: `telegram-blog-${slug}`, title, url: canonical, kind: 'guide', extractor: 'sections', audience: 'user', category: categoryForAnnouncement(title), priority: 76, enabled: true, index: true, discovered: true });
