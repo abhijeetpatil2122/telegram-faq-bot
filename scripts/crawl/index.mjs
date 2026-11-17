@@ -164,19 +164,69 @@ async function fetchSource(source) {
   } finally { clearTimeout(timer); }
 }
 
-const indexedSources = sourcesConfig.sources.filter((s) => s.enabled && s.index);
+function categoryForAnnouncement(title = '') {
+  const value = normalize(title);
+  const rules = [
+    ['GIFTS', /gift|collectible/],
+    ['STORIES', /stor(y|ies)|live stor/],
+    ['STARS', /star|payment|paid/],
+    ['PREMIUM', /premium/],
+    ['GROUPS', /group|community|communities|admin|moderation/],
+    ['CHANNELS', /channel|subscriber|post/],
+    ['CALLS', /call|voice chat|video chat/],
+    ['PRIVACY', /privacy|security|secret chat|encryption/],
+    ['MEDIA', /photo|video|file|gif|media|camera/],
+    ['SEARCH', /search|discover/],
+    ['BUSINESS', /business|away message|quick reply/],
+    ['ACCOUNT', /login|account|phone number|passkey/]
+  ];
+  return rules.find(([, pattern]) => pattern.test(value))?.[0] ?? 'NEWS';
+}
+
+async function discoverUserAnnouncements() {
+  const listing = sourcesConfig.sources.find((source) => source.id === 'telegram-blog' && source.enabled);
+  if (!listing) return [];
+  process.stdout.write('Discovering official Telegram user-feature announcements... ');
+  const html = await fetchSource(listing);
+  const $ = cheerio.load(html);
+  const candidates = new Map();
+  $('main a[href], article a[href], a[href]').each((_, element) => {
+    const anchor = $(element);
+    const raw = anchor.attr('href');
+    if (!raw) return;
+    let url;
+    try { url = new URL(raw, listing.url); } catch { return; }
+    if (!['telegram.org', 'www.telegram.org'].includes(url.hostname)) return;
+    if (!/^\\/blog\\/[a-z0-9][a-z0-9-]*\\/?$/i.test(url.pathname)) return;
+    const slug = url.pathname.split('/').filter(Boolean).at(-1);
+    if (!slug || ['blog'].includes(slug)) return;
+    const title = cleanTitle(anchor.text()) || slug.replace(/-/g, ' ');
+    if (title.length < 8 || /bot api|api changelog|mtproto|developer documentation|api updates/i.test(title)) return;
+    const canonical = `https://telegram.org/blog/${slug}`;
+    if (!candidates.has(canonical)) candidates.set(canonical, { id: `telegram-blog-${slug}`, title, url: canonical, kind: 'guide', extractor: 'sections', audience: 'user', category: categoryForAnnouncement(title), priority: 76, enabled: true, index: true, discovered: true });
+  });
+  const known = new Set(sourcesConfig.sources.map((source) => source.url.replace(/\\/$/, '')));
+  const discovered = [...candidates.values()].filter((source) => !known.has(source.url.replace(/\\/$/, ''))).slice(0, 16);
+  console.log(`${discovered.length} new candidate announcements`);
+  return discovered;
+}
+
+const staticIndexedSources = sourcesConfig.sources.filter((s) => s.enabled && s.index && s.audience === 'user');
+const discoveredSources = await discoverUserAnnouncements().catch((error) => { console.warn('Announcement discovery unavailable; continuing with curated sources:', error.message); return []; });
+const indexedSources = [...staticIndexedSources, ...discoveredSources];
 const previous = JSON.parse(await fs.readFile(output, 'utf8').catch(() => '{"schemaVersion":2,"sources":[],"items":[]}'));
 const previousCounts = new Map((previous.sources || []).map((s) => [s.id, previous.items?.filter((i) => i.source?.id === s.id).length || 0]));
-const allItems = []; const sourceMeta = []; const state = { schemaVersion: 1, generatedAt: null, status: 'running', sources: {} };
+const allItems = []; const sourceMeta = []; const state = { schemaVersion: 1, generatedAt: null, status: 'running', sources: {}, discovery: { candidates: discoveredSources.length, indexed: 0 } };
 for (const source of indexedSources) {
   process.stdout.write(`Crawling ${source.id}... `);
   let html;
-  try { html = await fetchSource(source); } catch (error) { throw new Error(`Fetch failed for ${source.id}: ${error.message}`); }
+  try { html = await fetchSource(source); } catch (error) { if (source.discovered) { console.warn(`Skipping discovered announcement ${source.id}: fetch failed: ${error.message}`); continue; } throw new Error(`Fetch failed for ${source.id}: ${error.message}`); }
   const items = extract(html, source); const oldCount = previousCounts.get(source.id) || 0;
-  if (items.length < crawlerConfig.minItemsPerSource) throw new Error(`Safety stop: ${source.id} produced ${items.length} entries`);
-  if (oldCount >= 5 && items.length < Math.floor(oldCount * (1 - crawlerConfig.maxDropRatio))) throw new Error(`Safety stop: ${source.id} dropped from ${oldCount} to ${items.length} entries`);
+  if (items.length < crawlerConfig.minItemsPerSource) { if (source.discovered) { console.warn(`Skipping discovered announcement ${source.id}: extractor produced no usable sections`); continue; } throw new Error(`Safety stop: ${source.id} produced ${items.length} entries`); }
+  if (!source.discovered && oldCount >= 5 && items.length < Math.floor(oldCount * (1 - crawlerConfig.maxDropRatio))) throw new Error(`Safety stop: ${source.id} dropped from ${oldCount} to ${items.length} entries`);
   allItems.push(...items);
   sourceMeta.push({ id: source.id, title: source.title, url: source.url, kind: source.kind, audience: source.audience, category: source.category, priority: source.priority });
+  if (source.discovered) state.discovery.indexed += 1;
   state.sources[source.id] = { items: items.length, hash: createHash('sha256').update(html).digest('hex') };
   console.log(`${items.length} entries`);
 }
