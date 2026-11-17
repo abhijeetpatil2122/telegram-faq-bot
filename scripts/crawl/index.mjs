@@ -232,19 +232,49 @@ async function discoverUserAnnouncements() {
   return discovered;
 }
 
-const staticIndexedSources = sourcesConfig.sources.filter((s) => s.enabled && s.index && s.audience === 'user');
-const discoveredSources = await discoverUserAnnouncements().catch((error) => { console.warn('Announcement discovery unavailable; continuing with curated sources:', error.message); return []; });
-const indexedSources = [...staticIndexedSources, ...discoveredSources];
 const previous = JSON.parse(await fs.readFile(output, 'utf8').catch(() => '{"schemaVersion":2,"sources":[],"items":[]}'));
-const previousCounts = new Map((previous.sources || []).map((s) => [s.id, previous.items?.filter((i) => i.source?.id === s.id).length || 0]));
-const allItems = []; const sourceMeta = []; const state = { schemaVersion: 1, generatedAt: null, status: 'running', sources: {}, discovery: { candidates: discoveredSources.length, indexed: 0 } };
+const previousState = JSON.parse(await fs.readFile(stateOutput, 'utf8').catch(() => '{"sources":{}}'));
+const previousCounts = new Map((previous.sources || []).map((source) => [source.id, previous.items?.filter((item) => item.source?.id === source.id).length || 0]));
+const staticIndexedSources = sourcesConfig.sources.filter((source) => source.enabled && source.index && source.audience === 'user');
+const discoveredSources = await discoverUserAnnouncements().catch((error) => { console.warn('Announcement discovery unavailable; retaining known announcements:', error.message); return []; });
+const previousDiscoveredSources = (previous.sources || [])
+  .filter((source) => source.id?.startsWith('telegram-blog-') && /^https:\/\/telegram\.org\/blog\/[a-z0-9-]+\/?$/i.test(source.url ?? ''))
+  .map((source) => ({ ...source, extractor: 'sections', enabled: true, index: true, discovered: true }));
+const discoveredByUrl = new Map();
+for (const source of [...discoveredSources, ...previousDiscoveredSources]) discoveredByUrl.set(source.url.replace(/\/$/, ''), source);
+const retainedDiscoverySources = [...discoveredByUrl.values()].slice(0, 100);
+const indexedSources = [...staticIndexedSources, ...retainedDiscoverySources];
+const allItems = []; const sourceMeta = []; const state = { schemaVersion: 1, generatedAt: null, status: 'running', sources: {}, discovery: { candidates: discoveredSources.length, indexed: 0, retained: 0 } };
+function retainPreviousAnnouncement(source, reason) {
+  const cachedItems = (previous.items || []).filter((item) => item.source?.id === source.id);
+  const cachedMeta = (previous.sources || []).find((entry) => entry.id === source.id);
+  if (!cachedItems.length || !cachedMeta) return false;
+  allItems.push(...cachedItems);
+  sourceMeta.push(cachedMeta);
+  state.sources[source.id] = previousState.sources?.[source.id] ?? { items: cachedItems.length, hash: createHash('sha256').update(JSON.stringify(cachedItems)).digest('hex') };
+  state.discovery.retained += 1;
+  console.warn(`Retaining last known-good announcement ${source.id}: ${reason}`);
+  return true;
+}
+
 for (const source of indexedSources) {
   process.stdout.write(`Crawling ${source.id}... `);
   let html;
-  try { html = await fetchSource(source); } catch (error) { if (source.discovered) { console.warn(`Skipping discovered announcement ${source.id}: fetch failed: ${error.message}`); continue; } throw new Error(`Fetch failed for ${source.id}: ${error.message}`); }
+  try { html = await fetchSource(source); } catch (error) {
+    if (source.discovered && retainPreviousAnnouncement(source, `fetch failed: ${error.message}`)) continue;
+    if (source.discovered) { console.warn(`Skipping new announcement ${source.id}: fetch failed: ${error.message}`); continue; }
+    throw new Error(`Fetch failed for ${source.id}: ${error.message}`);
+  }
   const items = extract(html, source); const oldCount = previousCounts.get(source.id) || 0;
-  if (items.length < crawlerConfig.minItemsPerSource) { if (source.discovered) { console.warn(`Skipping discovered announcement ${source.id}: extractor produced no usable sections`); continue; } throw new Error(`Safety stop: ${source.id} produced ${items.length} entries`); }
-  if (!source.discovered && oldCount >= 5 && items.length < Math.floor(oldCount * (1 - crawlerConfig.maxDropRatio))) throw new Error(`Safety stop: ${source.id} dropped from ${oldCount} to ${items.length} entries`);
+  if (items.length < crawlerConfig.minItemsPerSource) {
+    if (source.discovered && retainPreviousAnnouncement(source, 'extractor produced no usable sections')) continue;
+    if (source.discovered) { console.warn(`Skipping new announcement ${source.id}: extractor produced no usable sections`); continue; }
+    throw new Error(`Safety stop: ${source.id} produced ${items.length} entries`);
+  }
+  if (oldCount >= 5 && items.length < Math.floor(oldCount * (1 - crawlerConfig.maxDropRatio))) {
+    if (source.discovered && retainPreviousAnnouncement(source, `entry count dropped from ${oldCount} to ${items.length}`)) continue;
+    throw new Error(`Safety stop: ${source.id} dropped from ${oldCount} to ${items.length} entries`);
+  }
   allItems.push(...items);
   sourceMeta.push({ id: source.id, title: source.title, url: source.url, kind: source.kind, audience: source.audience, category: source.category, priority: source.priority });
   if (source.discovered) state.discovery.indexed += 1;
