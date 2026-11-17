@@ -1,119 +1,151 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T08:43:42.557Z",
+  "generatedAt": "2026-11-17T14:20:46.910Z",
   "status": "success",
   "sources": {
     "telegram-faq": {
       "items": 120,
-      "hash": "2753216fd9e6c254003bde018c0404c838f1aafa34dd01e330edb47601c55915"
+      "hash": "796aff01c119ccfa566696b1470be01e5d4a6a72266da1819ff298f2f8132509"
     },
     "telegram-faq-spam": {
       "items": 8,
-      "hash": "1cbaa959f3c951c5992638f5ae47a33ab660027f810c60d2b8282908e3f8e8a5"
+      "hash": "413e3741baf587ebc6ac539311cf89d7ddab3a2525327d38738b79c4d091bf7a"
     },
     "telegram-faq-premium": {
       "items": 44,
-      "hash": "6f0af85a0493d5fab44b1e9a529ed935a2e41dbf12c882fa21307ccd8daef7fd"
+      "hash": "925950824563e0b9202ac13a080f95a044c94f25eac8706db71a74fd2d7fe1f2"
     },
     "telegram-faq-channels": {
       "items": 8,
-      "hash": "acc488e46478c0a946dcdd38def7068478f53c2c258197fa2af5e3f24de58ae0"
+      "hash": "0dd2a68f09e880bc0253f3f41d3c54d9adf1671350c27eee6a557400d9c13cb0"
     },
     "telegram-privacy": {
       "items": 65,
-      "hash": "d2012f02cfcffcc4bdd1336941e670e57c83c4af3136e262df12240ee5e24713"
+      "hash": "dd25ac75ed854ec1a471a21324e315a4c90903f28328954611e84acd1007c9e9"
+    },
+    "telegram-tos": {
+      "items": 29,
+      "hash": "08a7d349cd738af23508d64e683a632ce0fbb4b58c73e9f05dd9be4038ddb598"
+    },
+    "telegram-tos-stars": {
+      "items": 24,
+      "hash": "9bba91476f586ff9601c43ac2f79dd078c620e3ca523dbf6beacbe6e35609ae0"
+    },
+    "telegram-tos-business": {
+      "items": 24,
+      "hash": "b69bf4879ede3668d19f8a5360faf3f9163e3e1b24be3e1516389276257df96f"
+    },
+    "telegram-tos-bots": {
+      "items": 19,
+      "hash": "0df3414fadac004b4eeac91ef8705db06c46f473522a7d898cbe96060d66ba56"
+    },
+    "telegram-tos-mini-apps": {
+      "items": 9,
+      "hash": "d9dbb6a72a00d51bcd749db9f851b9bc7e1db283263a3ed8c91abf17c364fefe"
+    },
+    "telegram-tos-content-creators": {
+      "items": 26,
+      "hash": "5119ce22b6c66d8243e527d05d46cef5569cb113752e08ef4341a93c5a1b4be4"
+    },
+    "telegram-tos-content-licensing": {
+      "items": 4,
+      "hash": "eca0baff285dc7a7384dca4ca6289e3f9923acb81c8ac2a81c2b0c4a5dfdf575"
+    },
+    "telegram-tos-eu-dsa": {
+      "items": 13,
+      "hash": "6f500018923db80176f0111f7ec7bcfa2446e3ce71b22716a85e2617edcc0efb"
     },
     "telegram-stars": {
       "items": 9,
-      "hash": "ab907ebce11ca75e700d2890e07a39d7999ca34940f76f76967a3153c93f132e"
+      "hash": "fac9c1f0deb7e69a8e0455e3c90a3422c2a8c9aba73177045588c81542a1096d"
     },
     "telegram-gifts": {
       "items": 10,
-      "hash": "c0d5861977fe5008e8bbfd503953e057be5a156d51ae92dc6af8c843156a9dbe"
+      "hash": "e0a4940ee175cb23810b4725e8c39f27a81236430cd21a648ea86d1f49cfc2d2"
     },
     "telegram-gift-marketplace": {
       "items": 11,
-      "hash": "6dfdd1db0ac663355cc653441459827e1481944fc8c921628128f52bb9a28bc0"
+      "hash": "b3c3238c301781cb3b405747fe47fe646dafdb2aec077cd554d33fff06947642"
     },
     "telegram-stories": {
       "items": 11,
-      "hash": "dc59d025f6e623644650b9d17504b79a908e28f634ca42098dc3df666adddaa5"
+      "hash": "75ad7863f59c5dd154902e26f7e09bbf7cfcb78c75453400c83dd1f4e3037c8a"
     },
     "telegram-live-stories": {
       "items": 10,
-      "hash": "c79c9e1f040698c265149b10edc6000a097fa74933d65dde3564f39240ee95f0"
+      "hash": "5a2a0415bffaa73b1894e525d4b1972da3e3c9c0c1bee54687deee510de561d0"
     },
     "telegram-search": {
       "items": 11,
-      "hash": "4bbbc29f70c16744ec16de6d73f6becffb50e5cf258d66fa37a7717b1930a060"
+      "hash": "8e7a31457376d08e70c32c76960ed0e43ebb042b11d8d19e6fc2a68366e972a4"
     },
     "telegram-communities": {
       "items": 9,
-      "hash": "7f80d98d747c9061a0ef6fe5ec2ad8751ed86dcef17f4ead006ce37b0c32ffb7"
+      "hash": "7412a2ae97e2b955a90f3fd3c55ca55b07c6697691fb143a6d324f23df91fc20"
     },
     "telegram-blog-welcome-messages-buttons-TG-13": {
       "items": 14,
-      "hash": "c8d210f24a83194acceaacb32958a460fb2f102b5b59aa2c8f8efe111e01eff6"
+      "hash": "b9c13a14c7d06e0b6e5598bcdf0cabd06535f6a8608c252376f8e6b783ad2977"
     },
     "telegram-blog-watch-apps-and-more": {
       "items": 11,
-      "hash": "df7a75ce179ec73b72a49c3f80a69d89168db7d1d522b9c9a921f7122fb529d3"
+      "hash": "8ff52a39b6b5a018b23530743b99077c4ced6f609a4f561265956d9e0721bbed"
     },
     "telegram-blog-ai-bot-revolution-11-new-features": {
       "items": 16,
-      "hash": "a4c30a6d3c4e56bef4be4f4929f45d3f33b05607a67efac124de947592ee782f"
+      "hash": "51df452ad5e9ca17fbf785b3a38aa312a30418aee2f04ede01a62b4031750e41"
     },
     "telegram-blog-ai-editor-mighty-polls-and-more": {
       "items": 11,
-      "hash": "7e5e0fe4f98f781a3abc0dad792a3616bd640c117d17ed97033762a85c504cc5"
+      "hash": "7bd72397412fa08febce1c3e84ad3f982cae43a26123ffdb230171d959996001"
     },
     "telegram-blog-member-tags-disable-sharing-and-more": {
       "items": 14,
-      "hash": "cc609c4dd53e6c6541066461891a71b0eb0a14a79582f47d8d2a534cec474c7e"
+      "hash": "127e0d888477c6d25dd08d956e6dd8448126597a4a8ebe0c63ef659968860dd0"
     },
     "telegram-blog-crafting-android-design-and-more": {
       "items": 9,
-      "hash": "568ab81f825771293de4280ee35fb67b811f6961c318c9215a17dc48fd2e9739"
+      "hash": "08dd3a553f7070e52c499d03b7a5fd7e4ee75bab7b13ba6a16b29e94cb201bdb"
     },
     "telegram-blog-new-design-ai-summaries": {
       "items": 8,
-      "hash": "c82272544d98301b22d54d33a97c4a2a12483ee21a9fe1c127b43f5ea2cc53d7"
+      "hash": "cbf2c6ceeba5633eec68cf6562f8f16d8b2d06a64d303ef6af78ace26a0203d1"
     },
     "telegram-blog-passkeys-and-gift-offers": {
       "items": 8,
-      "hash": "e71634b099111a3e5f83eed9a54a0bf4d5e10c1f2eece648895b4210f972206d"
+      "hash": "1403fadf08cb7ef87c801c881d8a75521b4c091aede12fac8c748730bc4df67c"
     },
     "telegram-blog-comments-in-video-chats-threads-for-bots": {
       "items": 15,
-      "hash": "62cba5b9bd66a8c6a9939e2fbb4c1171e418221f09bc9a5dbea6be78773d393b"
+      "hash": "4feb76555d170858c37b361d3bc2a3c0c1f4abd967e16a8a52927d1ff56ec632"
     },
     "telegram-blog-profile-music-gift-themes": {
       "items": 12,
-      "hash": "935a87aae574337e1212da4991441fba11b0cef71725e7bb4abe59cef2ea6a0f"
+      "hash": "7fe0932cc0049df16cf0e4cf7211661817d6bfa6ebcaca79e232fa9afdeb1066"
     },
     "telegram-blog-checklists-suggested-posts": {
       "items": 9,
-      "hash": "c5b8d3893356f107bee3bf4fcd0a646ff36bb802e4ab71aaffa834de2660ede0"
+      "hash": "402b8aa4fb388241f9e21d996e58bc829a1b91c4ff532070ae55af89d55d1bd9"
     },
     "telegram-blog-direct-to-channel-trim-voice-and-more": {
       "items": 11,
-      "hash": "5073dfb9dc8da8c47c07d001d61f514b8dd79110ff6202e4c6a35201d36b59a8"
+      "hash": "d3bcccd20af9171668419759c5ae93268a6aacd9a8b35d82a51cc2d11e0e0336"
     },
     "telegram-blog-group-calls-made-easy": {
       "items": 13,
-      "hash": "e127013a77dd646b2812da9cf238c7d851dd2386516ffe5368d973be9e3ded22"
+      "hash": "f9d9a8ebc0fc77ad5e8a4df1c247767c70283c462778f6092e5454e74f885288"
     },
     "telegram-blog-star-messages-gateway-2-0-and-more": {
       "items": 15,
-      "hash": "1052a30cba73a51e4c35ed5baf8e66b630836e695058e87d39a0faeea1c4a414"
+      "hash": "b1d6b79bc3c6eea1f94e2bae1f9f1a80b4e8b87f3898964df754644065954238"
     },
     "telegram-blog-AI-sticker-search-video-improvements": {
       "items": 11,
-      "hash": "c7e7221a2334690905b8b196ab695f074afc13cbd8a16b2ecc26a58e89159eae"
+      "hash": "5f46676832990a6f13e27fd5241ad45577567151f8a029192cf26663eb6f416a"
     },
     "telegram-blog-wear-gifts-blockchain-and-more": {
       "items": 10,
-      "hash": "d03bf6b5f8572ebb945a32f64123e2dfe7b3cb74aa5c90fa831f395f3ed17e2c"
+      "hash": "62c4069fcb23a3c996fa035f2bf252d0166597d9e2541657713b9e9b5338ea02"
     }
   },
   "discovery": {
@@ -121,6 +153,6 @@
     "indexed": 16,
     "retained": 0
   },
-  "totalItems": 503,
-  "totalSources": 28
+  "totalItems": 651,
+  "totalSources": 36
 }
