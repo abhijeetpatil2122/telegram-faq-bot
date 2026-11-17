@@ -226,8 +226,8 @@ async function discoverUserAnnouncements() {
     const canonical = `https://telegram.org/blog/${slug}`;
     if (!candidates.has(canonical)) candidates.set(canonical, { id: `telegram-blog-${slug}`, title, url: canonical, kind: 'guide', extractor: 'sections', audience: 'user', category: categoryForAnnouncement(title), priority: 76, enabled: true, index: true, discovered: true });
   });
-  const known = new Set(sourcesConfig.sources.map((source) => source.url.replace(/\\/$/, '')));
-  const discovered = [...candidates.values()].filter((source) => !known.has(source.url.replace(/\\/$/, ''))).slice(0, 16);
+  const known = new Set(sourcesConfig.sources.map((source) => source.url.replace(/\/$/, '')));
+  const discovered = [...candidates.values()].filter((source) => !known.has(source.url.replace(/\/$/, ''))).slice(0, 16);
   console.log(`${discovered.length} new candidate announcements`);
   return discovered;
 }
