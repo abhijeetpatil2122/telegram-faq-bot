@@ -189,6 +189,8 @@ The source registry is intentionally curated. Being hosted on an official Telegr
 - Telegram Premium FAQ
 - Telegram Channels FAQ
 - Telegram Privacy Policy
+- Telegram Terms of Service and user-facing terms for Stars, Business, bots, Mini Apps and content creators
+- Telegram Content Licensing / AI-scraping terms and EU-specific Digital Services Act user guidance
 
 **Telegram user features**
 

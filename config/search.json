@@ -36,7 +36,11 @@
       "mini apps",
       "web app",
       "web apps",
-      "telegram mini app"
+      "telegram mini app",
+      "mini app terms",
+      "mini apps terms",
+      "terms for telegram mini apps",
+      "telegram mini apps terms"
     ],
     "premium": [
       "telegram premium",
@@ -88,6 +92,30 @@
       "remove account",
       "close account",
       "deactivate account"
+    ],
+    "terms of service": [
+      "terms",
+      "tos",
+      "terms and conditions",
+      "usage rules",
+      "telegram rules",
+      "user terms"
+    ],
+    "content creator": [
+      "creator terms",
+      "creator rewards",
+      "channel monetization"
+    ],
+    "content licensing": [
+      "content scraping",
+      "scraping telegram content",
+      "ai model training",
+      "training an ai model",
+      "using telegram content for ai"
+    ],
+    "business subscription": [
+      "telegram business subscriptions",
+      "business subscription terms"
     ]
   },
   "termAliases": {
@@ -146,6 +174,11 @@
       "gifts",
       "collectible gift",
       "collectible gifts"
+    ],
+    "tos": [
+      "terms of service",
+      "terms and conditions",
+      "usage rules"
     ]
   },
   "intentPatterns": {
@@ -253,7 +286,9 @@
       "business",
       "telegram business",
       "business account",
-      "automated accounts"
+      "automated accounts",
+      "telegram business subscriptions",
+      "business subscription terms"
     ],
     "STARS": [
       "stars",
@@ -307,7 +342,14 @@
       "inline",
       "webhook",
       "mini app",
-      "bot api"
+      "bot api",
+      "mini apps",
+      "mini app terms",
+      "mini apps terms",
+      "third-party mini apps",
+      "terms for telegram mini apps",
+      "telegram mini apps terms",
+      "mini apps terms of service"
     ],
     "SUPPORT": [
       "support",
@@ -320,7 +362,21 @@
       "policy",
       "rules",
       "legal",
-      "restriction"
+      "restriction",
+      "terms of service",
+      "terms and conditions",
+      "tos",
+      "acceptable use",
+      "prohibited activities",
+      "content licensing",
+      "ai scraping",
+      "user guidance",
+      "digital services act",
+      "scrape telegram public content",
+      "train an ai model",
+      "ai model training",
+      "content scraping",
+      "content licensing terms"
     ],
     "NEWS": [
       "new feature",

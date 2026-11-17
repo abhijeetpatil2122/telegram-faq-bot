@@ -15,6 +15,12 @@ The source registry is intentionally curated instead of mirroring every page ava
 - `telegram-faq-premium` — Premium subscriptions and user-facing Premium features.
 - `telegram-faq-channels` — channels, subscribers and channel management.
 - `telegram-privacy` — privacy and data-handling information.
+- `telegram-tos` — the general Telegram Terms of Service, including prohibited activity and account/service consequences.
+- `telegram-tos-stars` and `telegram-tos-business` — user-facing payment, subscription, cancellation and service terms.
+- `telegram-tos-bots` and `telegram-tos-mini-apps` — terms for people using third-party bots and Mini Apps (not developer documentation).
+- `telegram-tos-content-creators` — terms for publishing content and participating in creator rewards.
+- `telegram-tos-content-licensing` — restrictions on accessing, scraping, aggregating and using Telegram content, including AI/ML-related use.
+- `telegram-tos-eu-dsa` — EU-specific user guidance under the Digital Services Act; answers must preserve its regional scope.
 - `telegram-stars`, `telegram-gifts`, `telegram-gift-marketplace` — user-facing digital payments and gifts.
 - `telegram-stories`, `telegram-live-stories`, `telegram-search`, `telegram-communities` — stories, discovery and community features.
 
@@ -30,6 +36,10 @@ The crawler reads the official Telegram Blog listing and discovers new article l
 6. skips newly discovered pages that cannot be safely extracted, without blocking established FAQ sources.
 
 New announcements are included in the generated dataset only after the same knowledge, Rich HTML, user-audience and search checks pass.
+
+### Terms coverage boundaries
+
+The main Terms of Service page also contains Telegram Premium terms, so Premium terms remain covered there alongside the existing Premium FAQ; a duplicate Premium-only source is intentionally not added. The EU DSA guidance is indexed as a separate source because it applies specifically to users accessing Telegram within the EU. The Content Licensing terms are included because Telegram explicitly says their data-access restrictions apply broadly, including to third-party services.
 
 ## ⟡ Explicitly excluded
 

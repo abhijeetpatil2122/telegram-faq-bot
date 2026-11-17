@@ -17,7 +17,14 @@ const cases = [
   ['what is Telegram Business', ['telegram-business']],
   ['premum subscription', ['telegram-faq-premium']],
   ['tg bot token', ['bots', 'bot-features']],
-  ['why is my webhok not workng', ['bots', 'bot-features']]
+  ['why is my webhok not workng', ['bots', 'bot-features']],
+  ['what are the Telegram terms of service', ['telegram-tos']],
+  ['what rules prohibit spam and scams on Telegram', ['telegram-tos', 'telegram-faq-spam']],
+  ['what terms apply when I use a Telegram bot', ['telegram-tos-bots']],
+  ['what are the terms for Telegram Mini Apps', ['telegram-tos-mini-apps']],
+  ['can I scrape Telegram public content to train an AI model', ['telegram-tos-content-licensing']],
+  ['what are the rules for buying and spending Stars', ['telegram-tos-stars']],
+  ['what terms apply to Telegram Business subscriptions', ['telegram-tos-business']]
 ];
 
 let failures = 0;

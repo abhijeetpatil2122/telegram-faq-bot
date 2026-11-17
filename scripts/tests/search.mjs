@@ -18,13 +18,24 @@ const cases = [
   { query: 'how do I send a gift', category: 'GIFTS' },
   { query: 'how do stories work', category: 'STORIES' },
   { query: 'how do I search public posts', category: 'SEARCH' },
-  { query: 'how do I report spam', category: 'SECURITY' }
+  { query: 'how do I report spam', category: 'SECURITY' },
+  { query: 'what are the Telegram terms of service', category: 'LEGAL', source: 'telegram-tos' },
+  { query: 'what terms apply when I use a Telegram bot', category: 'BOTS', source: 'telegram-tos-bots' },
+  { query: 'what are the terms for Telegram Mini Apps', category: 'BOTS', source: 'telegram-tos-mini-apps' },
+  { query: 'can I scrape Telegram public content to train an AI model', category: 'LEGAL', source: 'telegram-tos-content-licensing' },
+  { query: 'what are the rules for buying and spending Stars', category: 'STARS', source: 'telegram-tos-stars' },
+  { query: 'what terms apply to Telegram Business subscriptions', category: 'BUSINESS', source: 'telegram-tos-business' },
+  { query: 'what are the Telegram content creator terms', category: 'LEGAL', source: 'telegram-tos-content-creators' },
+  { query: 'what are my rights under the EU Digital Services Act on Telegram', category: 'LEGAL', source: 'telegram-tos-eu-dsa' }
 ];
 
 for (const test of cases) {
   // Exercise the exact production search implementation and its category/phrase aliases.
-  const results = searchKnowledge(items, test.query, { minScore: 24, diversify: true }).slice(0, 10);
+  const results = searchKnowledge(items, test.query, { minScore: 24, diversify: true }).slice(0, 50);
   if (!results.length) throw new Error(`Search regression: no result for ${test.query}`);
+  if (test.source && !results.some((item) => item.source?.id === test.source)) {
+    throw new Error(`Inline-query search regression: ${test.query} did not surface ${test.source}; top sources=${results.map((item) => item.source?.id).join(',')}`);
+  }
   if (!results.some((item) => String(item.category).toUpperCase() === test.category)) {
     throw new Error(`Search regression: ${test.query} did not surface ${test.category}; top categories=${results.map((item) => item.category).join(',')}`);
   }
@@ -39,4 +50,4 @@ for (const [category, aliases] of Object.entries(searchConfig.categoryAliases ||
   }
 }
 
-console.log(`Search regression passed using production search engine: ${cases.length} representative queries across ${items.length} knowledge entries.`);
+console.log(`Inline-query search regression passed using the production retrieval engine: ${cases.length} representative queries across ${items.length} knowledge entries.`);
