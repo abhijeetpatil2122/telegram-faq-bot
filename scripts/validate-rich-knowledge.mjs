@@ -8,7 +8,8 @@ const config = JSON.parse(await fs.readFile(path.join(root, 'config', 'sources.j
 const categories = JSON.parse(await fs.readFile(path.join(root, 'config', 'categories.json'), 'utf8'));
 const configured = new Map(config.sources.filter((s) => s.enabled).map((s) => [s.id, s]));
 const allowedKinds = new Set(['faq', 'guide', 'terms', 'discovery', 'developer-reference']);
-const allowedAudiences = new Set(['user', 'developer']);
+const allowedAudiences = new Set(['user']);
+const isDiscoveredUserSource = (source) => source?.id?.startsWith('telegram-blog-') && /^https:\/\/telegram\.org\/blog\/[a-z0-9-]+\/?$/i.test(source.url ?? '') && source.audience === 'user' && source.kind === 'guide';
 const allowedTags = new Set(['a','b','strong','i','em','u','ins','s','strike','del','code','mark','sub','sup','tg-spoiler','tg-reference','tg-emoji','tg-time','tg-math','h1','h2','h3','h4','h5','h6','p','pre','footer','hr','ul','ol','li','blockquote','aside','figure','figcaption','cite','table','caption','tr','th','td','details','summary']);
 const voidTags = new Set(['hr']);
 const ids = new Set();
@@ -39,15 +40,16 @@ if (![2, 3].includes(data.schemaVersion)) throw new Error(`Unsupported schemaVer
 if (!Array.isArray(data.sources) || !Array.isArray(data.items) || !data.items.length) throw new Error('Invalid or empty knowledge dataset');
 for (const source of data.sources) {
   const cfg = configured.get(source.id);
-  if (!cfg) throw new Error(`Unknown dataset source: ${source.id}`);
+  if (!cfg && !isDiscoveredUserSource(source)) throw new Error(`Unknown or unapproved dataset source: ${source.id}`);
   if (!/^https:\/\//i.test(source.url)) throw new Error(`Invalid source URL: ${source.id}`);
-  if (source.kind !== cfg.kind || source.category !== cfg.category) throw new Error(`Source metadata mismatch: ${source.id}`);
+  if (cfg && (source.kind !== cfg.kind || source.category !== cfg.category)) throw new Error(`Source metadata mismatch: ${source.id}`);
 }
 
 for (const item of data.items) {
   if (!item.id || ids.has(item.id)) throw new Error(`Duplicate/missing item id: ${item.id || '(missing)'}`);
   if (!item.title || !item.question || !item.answer || !item.answer_html) throw new Error(`Incomplete item: ${item.id}`);
-  if (!configured.has(item.source?.id)) throw new Error(`Unknown item source: ${item.id}`);
+  if (!data.sources.some((source) => source.id === item.source?.id)) throw new Error(`Unknown item source: ${item.id}`);
+  if (item.metadata?.audience !== 'user') throw new Error(`Developer content is not allowed in user FAQ: ${item.id}`);
   if (item.answer.length < 20 || item.answer.length > 28000) throw new Error(`Invalid answer length: ${item.id}`);
   if (!allowedKinds.has(item.type)) throw new Error(`Invalid type: ${item.id}`);
   if (!allowedAudiences.has(item.metadata?.audience)) throw new Error(`Invalid audience: ${item.id}`);
