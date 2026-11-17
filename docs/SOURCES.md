@@ -10,35 +10,39 @@ The source registry is intentionally curated instead of mirroring every page ava
 
 ### User & account help
 
-- `telegram-faq` — general user help.
-- `telegram-faq-spam` — spam limitations and account restrictions.
-- `telegram-faq-premium` — Premium features, payments and channel boosts.
-- `telegram-faq-channels` — channel behavior and management.
-- `telegram-privacy-policy` — privacy and data-handling information.
+- `telegram-faq` — general Telegram usage, accounts, chats, privacy, groups, calls and media.
+- `telegram-faq-spam` — spam limitations, reporting and account restrictions.
+- `telegram-faq-premium` — Premium subscriptions and user-facing Premium features.
+- `telegram-faq-channels` — channels, subscribers and channel management.
+- `telegram-privacy` — privacy and data-handling information.
+- `telegram-stars`, `telegram-gifts`, `telegram-gift-marketplace` — user-facing digital payments and gifts.
+- `telegram-stories`, `telegram-live-stories`, `telegram-search`, `telegram-communities` — stories, discovery and community features.
 
-### Bots & developer help
+### Automatically discovered announcements
 
-- `bots-faq` — official bot FAQ.
-- `bots` — bot platform introduction.
-- `bot-features` — bot features and capabilities.
-- `bot-developer-terms` — developer restrictions and requirements.
-- `bot-terms` — user-facing bot terms.
-- `telegram-business` — Telegram Business documentation.
-- `telegram-stars` — Telegram Stars documentation.
-- `telegram-gifts` — Telegram Gifts documentation.
-- Additional configured official documentation covering relevant Telegram features.
+The crawler reads the official Telegram Blog listing and discovers new article links under `https://telegram.org/blog/`. It:
 
-## ⟡ Discovery-only sources
+1. accepts only HTTPS article URLs on Telegram's official host;
+2. excludes known API/developer announcement patterns;
+3. deduplicates canonical article URLs against curated sources;
+4. caps each run to a bounded number of new candidates;
+5. extracts user-facing feature sections and assigns a best-effort user FAQ category;
+6. skips newly discovered pages that cannot be safely extracted, without blocking established FAQ sources.
 
-Some official Telegram pages are useful for discovering new coverage but are intentionally not injected into general Help Desk search.
+New announcements are included in the generated dataset only after the same knowledge, Rich HTML, user-audience and search checks pass.
 
-Examples include:
+## ⟡ Explicitly excluded
 
-- Telegram Blog — feature announcements and historical context.
-- Telegram Evolution — feature and history index.
-- Bot API reference — highly technical developer reference kept separate from general user-help ranking.
+This repository is **not** a Telegram developer documentation index. The following are outside the normal FAQ scope and must not enter its search dataset:
 
-Discovery does **not** mean automatic indexing. A source must first be classified, scoped and tested before it becomes part of the generated knowledge base.
+- Bot API reference and Bot API changelog
+- MTProto and TDLib documentation
+- Bot developer tutorials, webhooks, tokens and Mini App development guides
+- Developer terms and API implementation references
+
+Telegram Business documentation hosted under a developer API path is also excluded unless a separate user-facing FAQ or product announcement is available.
+
+Telegram Blog and Telegram Evolution are discovery surfaces, not blanket permission to index every linked page. Only user-facing Telegram feature announcements are eligible.
 
 ## 🛡 Source admission rules
 
