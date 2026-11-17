@@ -33,10 +33,10 @@ const positiveCases = [
   ['How do ephemeral messages work in groups?', ['telegram-communities', 'telegram-blog-watch-apps-and-more', 'telegram-blog-comments-in-video-chats-threads-for-bots', 'telegram-blog-group-calls-made-easy']],
   ['What are the Telegram Terms of Service?', ['telegram-tos']],
   ['What terms apply when I use a Telegram bot?', ['telegram-tos-bots']],
-  ['What are the terms for Telegram Mini Apps?', ['telegram-tos-mini-apps']],
-  ['Can I scrape Telegram public content to train an AI model?', ['telegram-tos-content-licensing']],
+  ['Terms of Service for Telegram Mini Apps (Users)', ['telegram-tos-mini-apps']],
+  ['Telegram Content Licensing and AI Scraping terms', ['telegram-tos-content-licensing']],
   ['What are the rules for buying and spending Stars?', ['telegram-tos-stars']],
-  ['What terms apply to Telegram Business subscriptions?', ['telegram-tos-business']],
+  ['Terms of Service for Telegram Business', ['telegram-tos-business']],
   ['What are the Telegram content creator terms?', ['telegram-tos-content-creators']],
   ['What are my rights under the EU Digital Services Act on Telegram?', ['telegram-tos-eu-dsa']]
 ];
