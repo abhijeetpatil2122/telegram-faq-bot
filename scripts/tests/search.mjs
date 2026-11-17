@@ -12,8 +12,8 @@ if (!items.length) throw new Error('Search regression: generated knowledge datas
 const cases = [
   { query: 'how can I hide my phone number', category: 'PRIVACY' },
   { query: 'telegram premium subscription', category: 'PREMIUM' },
-  { query: 'how do I make a bot', category: 'BOTS' },
-  { query: 'what is inline mode', category: 'BOTS' },
+  { query: 'how do I create a group', category: 'GROUPS' },
+  { query: 'how do I start a voice chat', category: 'CALLS' },
   { query: 'how do telegram stars work', category: 'STARS' },
   { query: 'how do I send a gift', category: 'GIFTS' },
   { query: 'how do stories work', category: 'STORIES' },
