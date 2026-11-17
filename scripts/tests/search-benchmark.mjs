@@ -30,7 +30,7 @@ const positiveCases = [
   ['What is public post search?', ['telegram-search']],
   ['What are Telegram communities?', ['telegram-communities']],
   ['What is the rich text editor?', ['telegram-communities']],
-  ['How do ephemeral messages work in groups?', ['telegram-communities']]
+  ['How do ephemeral messages work in groups?', ['telegram-communities', 'telegram-blog-watch-apps-and-more', 'telegram-blog-comments-in-video-chats-threads-for-bots', 'telegram-blog-group-calls-made-easy']]
 ];
 
 const noResultCases = [
