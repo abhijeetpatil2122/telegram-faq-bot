@@ -184,3 +184,60 @@ button{touch-action:manipulation}
 @media(max-width:380px){.shell{padding-right:13px;padding-left:13px}.hero{padding-left:17px}.hero-copy{max-width:75%}.hero-art{right:-22px;opacity:.88}.hero h1{font-size:31px}.answer-card{padding:16px 14px}.answer-actions{gap:7px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 body[data-theme=dark]{--shadow:0 10px 28px rgba(0,0,0,.18)}
+
+
+/* Refined touch sizing and the content-first answer surface. */
+.topbar{height:58px;margin-bottom:17px}
+.brand{gap:12px}
+.brand-icon{width:45px;height:45px;border-radius:16px}
+.brand-icon img{width:30px;height:30px}
+.brand small{font-size:9px}
+.brand b{font-size:18px}
+.profile-trigger{width:46px;height:46px;padding:2px}
+.avatar-small{width:40px;height:40px}
+.avatar-large{width:102px;height:102px;margin-top:-51px;font-size:30px}
+.search-form{height:62px}
+.suggestions{gap:9px;padding-top:12px}
+.suggestions button{padding:9px 14px;font-size:12px}
+.section-eyebrow{font-size:10px}
+.topic-card{min-height:122px;padding:16px;border-radius:23px}
+.topic-icon,.result-icon{width:40px;height:40px}
+.topic-icon svg,.result-icon svg{width:21px;height:21px}
+.topic-card b,.result-copy b{font-size:14px}
+.topic-card small,.result-copy small{font-size:11px}
+.result-row{gap:12px;padding:15px;border-radius:21px}
+.answer-card{width:100%;height:auto;min-height:0;max-height:calc(var(--app-viewport-height,100dvh) - var(--safe-top) - var(--safe-bottom) - 92px);align-self:flex-start;overflow-y:auto;overscroll-behavior:contain;padding:23px 21px 22px;border-radius:30px}
+.answer-meta{gap:10px;margin-bottom:17px}
+.category-pill{padding:8px 14px;font-size:11px}
+.verified{font-size:11px}
+.answer-card h1{font-size:clamp(24px,6.2vw,30px);line-height:1.18;margin-bottom:14px}
+.answer-section{font-size:13px;line-height:1.55}
+.rich-content{font-size:15px;line-height:1.74}
+.rich-content p{margin-bottom:15px}
+.rich-content h1,.rich-content h2,.rich-content h3,.rich-content h4{margin:21px 0 10px}
+.rich-content h2{font-size:19px}.rich-content h3{font-size:17px}.rich-content h4{font-size:15px}
+.rich-content ul,.rich-content ol{margin:11px 0 17px;padding-left:25px}
+.rich-content li{margin:7px 0;padding-left:3px}
+.rich-content blockquote{margin:15px 0;padding:13px 15px;border-left-width:3px;border-radius:15px;background:color-mix(in srgb,var(--surface-muted) 94%,var(--link) 6%)}
+.rich-content pre{padding:15px;border-radius:16px}
+.rich-content details{margin:13px 0;padding:14px;border-radius:16px}
+.rich-content summary{font-size:14px}
+.rich-content a.rich-link-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;margin:3px 3px 3px 0;padding:6px 11px;border:1px solid color-mix(in srgb,var(--link) 30%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--link) 9%,var(--surface));color:var(--link);font-size:12px;font-weight:750;line-height:1.35;text-decoration:none;vertical-align:middle;overflow-wrap:anywhere;cursor:pointer;transition:background .18s ease,transform .18s ease,border-color .18s ease}
+.rich-content a.rich-link-pill::after{content:"↗";flex:0 0 auto;font-size:11px;opacity:.8}
+.rich-content a.rich-link-pill:active{transform:scale(.97);background:color-mix(in srgb,var(--link) 16%,var(--surface))}
+.source-card{gap:12px;margin-top:23px;padding:14px;border-radius:18px}
+.source-icon{width:40px;height:40px;border-radius:13px}
+.source-copy small{font-size:9px}
+.source-copy b{font-size:13px}
+.answer-actions{gap:10px;margin-top:15px;flex-wrap:wrap}
+.answer-actions button{min-height:49px;flex:1 1 132px;border-radius:16px;font-size:12px}
+.answer-actions .icon{width:18px;height:18px}
+.share-hint{margin-top:12px;font-size:11px}
+.profile-badge{min-height:30px;padding:6px 11px;font-size:10px}
+.profile-content{padding-right:22px;padding-left:22px}
+@media(max-width:380px){
+ .brand-icon{width:43px;height:43px}.brand-icon img{width:29px;height:29px}
+ .profile-trigger{width:44px;height:44px}.avatar-small{width:38px;height:38px}
+ .answer-card{padding:20px 17px;border-radius:27px}
+ .answer-actions{gap:8px}.answer-actions button{flex-basis:118px}
+}
