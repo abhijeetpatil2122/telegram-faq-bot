@@ -22,4 +22,4 @@
     "source-policy:test": "node scripts/tests/source-policy.mjs",
     "miniapp:test": "node scripts/tests/miniapp.mjs"
   }
-}\n
+}
