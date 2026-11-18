@@ -16,7 +16,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-icon" aria-hidden="true">
-          <svg viewBox="0 0 512 512" role="img" aria-label="Telegram"><path fill="currentColor" d="M126.3 153.6 252 209.2c3.2 1.5 7.2 1.3 12.2-1l123.8-54.7c6.6-2.4 2.9-9.8-2.3-9l-256.6-1.1c-7.2.3-9.2 7.5-2.8 10.2Zm-10.1 28.5 118.4 184c3.7 6 13.1 2.6 12.8-2.8l-.2-126.2c-.1-7.1-1.9-8.7-6.4-10.6l-118.4-52.7c-4.3-2.4-10.1 1.6-6.2 8.3Zm151.3 52.7.3 127c.1 8.5 8.6 10.1 13.5 2.9l102.9-159.4 2.2-3.4 1.9-2.9v-.1l10.8-16.6c3.3-5.5-1.9-11.8-9.7-8.1l-117.4 52.9c-.2.1-.4.2-.6.3-1.5.9-2.5 1.8-3 2.9-.7 1.2-.9 2.7-.9 4.5Z"/></svg>
+          <img src="./telegram.svg" alt="" aria-hidden="true">
         </span>
         <span><small>OFFICIAL TELEGRAM SOURCES</small><b>Help Desk</b></span>
       </div>
@@ -103,8 +103,11 @@
           <div id="profile-large-avatar" class="avatar avatar-large"><span class="avatar-fallback">?</span></div>
           <h1 id="profile-name">Telegram user</h1>
           <p id="profile-username" class="profile-username"></p>
+          <div class="profile-badges" aria-label="Help Desk information"><span class="profile-badge"><i></i> Official sources</span><span class="profile-badge">Mini App <b id="profile-version">—</b></span><a class="profile-badge profile-badge-link" href="https://t.me/TeleFQBot" target="_blank" rel="noopener noreferrer">Open @TeleFQBot</a></div>
           <div class="profile-details">
             <div class="profile-detail-row"><span class="profile-detail-icon icon icon-globe"></span><span><small>LANGUAGE</small><b id="profile-language">—</b></span></div>
+            <div class="profile-detail-row"><span class="profile-detail-icon icon icon-book"></span><span><small>KNOWLEDGE BASE</small><b id="profile-count">—</b></span></div>
+            <div class="profile-detail-row"><span class="profile-detail-icon icon icon-bot"></span><span><small>BOT</small><b>TeleFQBot · @TeleFQBot</b></span></div>
             <div class="profile-detail-row"><span class="profile-detail-icon icon icon-shield"></span><span><small>SESSION</small><b>Verified by Telegram</b></span></div>
           </div>
           <p class="profile-note">Your profile details are shown locally from the Telegram Mini App session. They are not added to the public FAQ search.</p>
@@ -115,7 +118,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <div id="gate" class="gate" hidden>
-    <div class="gate-mark"><span class="brand-icon"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M126.3 153.6 252 209.2c3.2 1.5 7.2 1.3 12.2-1l123.8-54.7c6.6-2.4 2.9-9.8-2.3-9l-256.6-1.1c-7.2.3-9.2 7.5-2.8 10.2Zm-10.1 28.5 118.4 184c3.7 6 13.1 2.6 12.8-2.8l-.2-126.2c-.1-7.1-1.9-8.7-6.4-10.6l-118.4-52.7c-4.3-2.4-10.1 1.6-6.2 8.3Zm151.3 52.7.3 127c.1 8.5 8.6 10.1 13.5 2.9l102.9-159.4 2.2-3.4 1.9-2.9v-.1l10.8-16.6c3.3-5.5-1.9-11.8-9.7-8.1l-117.4 52.9c-.2.1-.4.2-.6.3-1.5.9-2.5 1.8-3 2.9-.7 1.2-.9 2.7-.9 4.5Z"/></svg></span></div>
+    <div class="gate-mark"><span class="brand-icon"><img src="./telegram.svg" alt="" aria-hidden="true"></span></div>
     <h1>Open in Telegram</h1>
     <p>Launch this Help Desk from the bot to search with a verified Telegram session.</p>
     <a href="https://t.me/TeleFQBot">Open @TeleFQBot</a>

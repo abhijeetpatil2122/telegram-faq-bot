@@ -24,10 +24,10 @@ The frontend uses Telegram's official `telegram-web-app.js` bridge and feature-d
 - Layout: Telegram viewport, system safe-area and content-safe-area CSS variables, plus viewport/safe-area/fullscreen events.
 - Appearance: `themeParams`, `colorScheme`, `themeChanged`, `setHeaderColor()`, `setBackgroundColor()`, and Bot API 7.10+ `setBottomBarColor()`.
 - Interaction: `HapticFeedback.impactOccurred()`.
-- Sharing: Bot API 8.0+ uses `savePreparedInlineMessage` on the server and `WebApp.shareMessage(preparedMessageId)` in the client. Telegram opens its native preview/chat picker with a ready-to-send rich FAQ answer and source. The prepared message is scoped to the authenticated Telegram user and can be sent to private chats, groups and channels. If prepared sharing is unavailable, `switchInlineQuery(selectedQuestion, ['users', 'groups', 'channels'])` falls back to the existing TeleFQBot inline-query flow. The existing `inlineResults()` handler remains unchanged.
-- Profile: the top-right avatar and profile details are read locally from `initDataUnsafe.user` for display only. They are not sent to the search API and are never trusted for authentication.
+- Sharing: Bot API 8.0+ uses `savePreparedInlineMessage` on the server and `WebApp.shareMessage(preparedMessageId)` in the client. Telegram opens its native preview/chat picker with a ready-to-send rich FAQ answer and source. The prepared message is scoped to the authenticated Telegram user and can be sent to private chats with users or bots, groups/supergroups and channels. If prepared sharing is unavailable, `switchInlineQuery(selectedQuestion, ['users', 'bots', 'groups', 'channels'])` falls back to the existing TeleFQBot inline-query flow. The existing `inlineResults()` handler remains unchanged.
+- Profile: the top-right avatar and profile details are read locally from `initDataUnsafe.user` for display only. The profile also displays the deployed app version, bot link and indexed-entry count. They are not sent to the search API and are never trusted for authentication.
 
-The Mini App does not request contact, location, biometric or write-access permissions because FAQ search does not need them. The fullscreen request is feature-detected and can be declined by older clients; the app remains usable in the regular expanded view.
+The Mini App does not request contact, location, biometric or write-access permissions because FAQ search does not need them. The fullscreen request is feature-detected and can be declined by older clients; the app remains usable in the regular expanded view. Fullscreen state changes do not generate user-facing toast notifications.
 
 ## Checks
 

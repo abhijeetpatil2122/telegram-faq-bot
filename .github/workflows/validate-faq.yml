@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'api/telegram.js'
+      - 'api/miniapp.js'
+      - 'miniapp/**'
+      - 'docs/MINI_APP.md'
       - 'scripts/**'
       - 'config/**'
       - 'package.json'
