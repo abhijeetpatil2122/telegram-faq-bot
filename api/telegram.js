@@ -14,6 +14,7 @@ const ARTICLE_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/dc44d72e-a
 const HELP_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/510c3a83-8a96-416c-b1ea-a37dddb6638f';
 const NO_RESULTS_THUMBNAIL_URL = 'https://image.zaw-myo.workers.dev/file/6132b4a1-1e93-41a7-a76f-fa199577ad90';
 const DEFAULT_BOT_USERNAME = 'TeleFQBot';
+const MINI_APP_URL = process.env.FAQ_MINI_APP_URL ?? 'https://telegram-faq-bot.vercel.app/miniapp/';
 const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
 const TELEGRAM_REQUEST_TIMEOUT_MS = 7000;
 const TELEGRAM_MAX_ATTEMPTS = 2;
@@ -411,7 +412,7 @@ function botUsername(profile) {
 }
 
 function parseCommand(text, username) {
-  const match = String(text ?? '').trim().match(/^\/(start|help|ping|admin)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
+  const match = String(text ?? '').trim().match(/^\/(start|help|ping|admin|app)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
   if (!match) return null;
   if (match[2] && username && match[2].toLowerCase() !== username.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -650,7 +651,8 @@ function startMessageHtml(username) {
     `<p><b>${htmlEscape(username)}</b> is an official Telegram knowledge search bot.</p>`,
     '<p>Search questions about Telegram, bots, Bot API features and official bot terms. Answers come only from the official Telegram sources indexed by this bot.</p>',
     '<details><summary>How to search</summary><ol><li>Tap <b>Search Telegram</b>.</li><li>Type a short, specific question.</li><li>Select the most relevant official answer.</li></ol></details>',
-    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="web_app" style="primary" url="' + htmlEscape(MINI_APP_URL) + '">✦ Open Help Desk</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search inline</tg-button></tg-button-row>',
     '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
     `<footer>Inline usage: <code>@${htmlEscape(cleanUsername)} your question</code></footer>`
   ].join(' ');
@@ -663,7 +665,8 @@ function helpMessageHtml(username) {
     '<p>Use these commands or search the official Telegram knowledge base in inline mode.</p>',
     '<details open><summary>Commands</summary><ul><li><code>/start</code> — Open the welcome screen.</li><li><code>/help</code> — Show this help menu.</li><li><code>/ping</code> — Check bot response time.</li></ul></details>',
     '<details><summary>Inline search</summary><p>Type <code>@' + htmlEscape(cleanUsername) + ' your question</code> in any chat.</p><p>Examples:</p><ul><li><code>How do I create a bot?</code></li><li><code>What is inline mode?</code></li><li><code>How do webhooks work?</code></li></ul></details>',
-    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search Telegram</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="web_app" style="primary" url="' + htmlEscape(MINI_APP_URL) + '">✦ Open Help Desk</tg-button></tg-button-row>',
+    '<tg-button-row align="left"><tg-button type="switch_inline_query_current_chat" style="primary" query="">🔎 Search inline</tg-button></tg-button-row>',
     '<tg-button-row align="left"><tg-button type="url" style="success" url="https://core.telegram.org/bots/api">📘 Bot API</tg-button><tg-button type="url" style="primary" url="https://www.telegram.org/faq">📚 Telegram FAQ</tg-button></tg-button-row>',
     '<footer>Answers are based on official Telegram documentation.</footer>'
   ].join(' ');
@@ -697,7 +700,7 @@ async function handleMessage(update, profile) {
   const username = botUsername(profile);
   let html;
 
-  if (command === 'start') {
+  if (command === 'start' || command === 'app') {
     html = startMessageHtml(username);
   } else if (command === 'help') {
     html = helpMessageHtml(username);
