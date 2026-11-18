@@ -34,10 +34,21 @@ function validateInitData(raw){
 
 function htmlEscape(value=''){return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&apos;");}
 function shareUrl(value){try{const url=new URL(String(value||''));return ['https:','http:'].includes(url.protocol)?url.href:null}catch{return null}}
+function promoteExternalLinks(html){
+  const parts=String(html??'').split(/(<table\b[\s\S]*?<\/table>)/gi);
+  return parts.map(part=>{
+    if(/^<table\b/i.test(part))return part;
+    return part.replace(/<a\b([^>]*?)\bhref=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi,(match,before,href,after,labelHtml)=>{
+      const url=shareUrl(href);if(!url)return match;
+      const label=String(labelHtml).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()||'Open link';
+      return '<tg-button type="url" style="primary" url="'+htmlEscape(url)+'">'+htmlEscape(label)+'</tg-button>';
+    });
+  }).join('');
+}
 function preparedAnswerHtml(item){
   const title=String(item.question??item.title??'Telegram documentation');
   const category=item.category?'<blockquote><b>Category:</b> '+htmlEscape(String(item.category).replaceAll('_',' ').toLowerCase())+'</blockquote>':'';
-  const answer=String(item.answer_html??'').trim()||'<p>'+htmlEscape(item.answer??'No answer text is available for this entry.')+'</p>';
+  const answer=promoteExternalLinks(String(item.answer_html??'').trim()||'<p>'+htmlEscape(item.answer??'No answer text is available for this entry.')+'</p>');
   const sourceTitle=String(item.source?.title??'Official Telegram source');
   const source=shareUrl(item.source?.url);
   const sourceMarkup=source?'<footer>Source: <tg-button type="url" style="primary" url="'+htmlEscape(source)+'">'+htmlEscape(sourceTitle)+'</tg-button></footer>':'<footer>Source: '+htmlEscape(sourceTitle)+'</footer>';
