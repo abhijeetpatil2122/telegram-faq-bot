@@ -5,7 +5,14 @@ import { searchKnowledge } from '../scripts/search-engine.mjs';
 
 const DATA=path.join(process.cwd(),'data/knowledge.json');
 const CATEGORIES=path.join(process.cwd(),'config/categories.json');
-const MAX_AGE=86400;\nlet cachedKnowledge=null;\nlet cachedCategories=null;\nfunction stores(){\n  if(!cachedKnowledge)cachedKnowledge=JSON.parse(fs.readFileSync(DATA,'utf8'));\n  if(!cachedCategories)cachedCategories=JSON.parse(fs.readFileSync(CATEGORIES,'utf8'));\n  return {data:cachedKnowledge,config:cachedCategories};\n}
+const MAX_AGE=86400;
+let cachedKnowledge=null;
+let cachedCategories=null;
+function stores(){
+  if(!cachedKnowledge)cachedKnowledge=JSON.parse(fs.readFileSync(DATA,'utf8'));
+  if(!cachedCategories)cachedCategories=JSON.parse(fs.readFileSync(CATEGORIES,'utf8'));
+  return {data:cachedKnowledge,config:cachedCategories};
+}
 function validateInitData(raw){
   if(typeof raw!=='string'||!raw||raw.length>8192) throw Object.assign(new Error('Open this Help Desk from Telegram to search.'),{status:401});
   const token=process.env.BOT_TOKEN;
