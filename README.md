@@ -237,7 +237,7 @@ A failed crawl leaves the previously published knowledge dataset intact rather t
 
 ---
 
-## ⚙ Admin Control Center
+## Telegram Help Desk Mini App\n\nThe app is served at `/miniapp/` by this Vercel project. It reuses the same generated knowledge dataset, categories and deterministic search engine; it does not create a second knowledge store. The `/start` and `/app` commands include a Telegram `web_app` launcher. Search requests are accepted only after server-side validation of Telegram Mini App `initData`. See [docs/MINI_APP.md](docs/MINI_APP.md).\n\n## ⚙ Admin Control Center
 
 `/admin` provides a protected operational view with:
 
