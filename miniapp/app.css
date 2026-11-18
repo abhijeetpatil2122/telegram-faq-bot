@@ -98,7 +98,7 @@ button{touch-action:manipulation}
 .result-list{display:flex;flex-direction:column;gap:8px}
 .result-row{width:100%;display:flex;align-items:flex-start;gap:11px;padding:14px;border:1px solid var(--line);border-radius:19px;background:var(--surface);text-align:left;cursor:pointer;transition:transform .2s ease,border-color .2s ease,background .2s ease}
 .result-row:active{transform:scale(.985)}
-.result-icon{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:12px;background:var(--result-soft);color:var(--result-tone)}
+.result-icon{width:37px;height:37px;display:grid;place-items:center;flex:0 0 auto;border-radius:13px;background:color-mix(in srgb,var(--result-tone) 17%,var(--surface));color:var(--result-tone)}
 .result-icon svg{width:19px;height:19px}
 .result-copy{flex:1;min-width:0}
 .result-copy b{display:block;font-size:13px;line-height:1.42}
