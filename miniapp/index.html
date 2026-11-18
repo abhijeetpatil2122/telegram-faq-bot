@@ -1,13 +1,124 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f4f6fb"><meta name="color-scheme" content="light dark"><title>Telegram Help Desk</title><link rel="stylesheet" href="./app.css"><script src="https://telegram.org/js/telegram-web-app.js"></script><script defer src="./app.js"></script></head>
-<body><div class="shell">
-<header class="topbar"><div class="brand"><span class="brand-icon">➤</span><span><small>TELEGRAM KNOWLEDGE</small><b>Help Desk</b></span></div><button id="about" class="icon-btn" aria-label="About">ⓘ</button></header>
-<main id="home">
-<section class="hero"><div class="hero-copy"><span class="kicker"><i></i> OFFICIAL TELEGRAM SOURCES</span><h1>Find your<br><em>Telegram answer.</em></h1><p>Clear, source-linked guidance from Telegram's official documentation.</p></div><div class="hero-art" aria-hidden="true"><div class="paper p1"></div><div class="paper p2"></div><div class="paper p3"><b>?</b><i></i><i></i><i></i></div><span>✦</span></div></section>
-<section class="search"><label for="query">WHAT CAN WE HELP YOU WITH?</label><form id="search-form"><span class="search-icon">⌕</span><input id="query" type="search" placeholder="Search Telegram, privacy, Premium…" autocomplete="off"><button id="clear" type="button" hidden>×</button><button class="go" aria-label="Search">→</button></form><div class="suggestions"><button data-query="Telegram Premium">Premium</button><button data-query="privacy settings">Privacy</button><button data-query="Telegram Stars">Stars</button><button data-query="Mini Apps">Mini Apps</button></div></section>
-<section class="topics"><div class="heading"><div><label>BROWSE THE LIBRARY</label><h2>Explore topics</h2></div><small id="count">Loading…</small></div><div id="categories" class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></section>
-<section id="results" hidden><div class="heading"><div><label id="result-label">OFFICIAL KNOWLEDGE</label><h2 id="result-title">Results</h2></div><button id="reset" class="link-btn">Clear</button></div><div id="result-list" class="result-list"></div></section>
-<footer>✳ &nbsp; Official knowledge. Clear answers. Original sources.</footer></main>
-<main id="detail" hidden><button id="back" class="back">← &nbsp; All topics</button><article class="answer"><div class="meta"><span id="category" class="pill"></span><span class="verified">✓ Official source</span></div><h1 id="title"></h1><p id="section" class="section" hidden></p><div id="body" class="rich"></div><a id="source" class="source" target="_blank" rel="noopener noreferrer"><span class="source-mark">↗</span><span><small>ORIGINAL REFERENCE</small><b id="source-title"></b></span><span class="arrow">↗</span></a><div class="actions"><button id="share">Share answer</button><button id="copy">Copy text</button></div></article></main>
-<main id="about-view" hidden><button id="about-back" class="back">← &nbsp; Back</button><article class="answer about"><span class="about-mark">✳</span><label>ABOUT THIS PROJECT</label><h1>Knowledge you can verify.</h1><p>Telegram Help Desk turns official Telegram documentation into a searchable, structured knowledge library. Every answer stays connected to its original source.</p><div class="principles"><b>Official-first</b><span>Answers are grounded in indexed Telegram sources.</span><b>Deterministic</b><span>Search ranks published knowledge; it does not invent responses.</span><b>Always referenced</b><span>Open the original Telegram page from every answer.</span></div><a class="source" href="https://telegram.org/faq" target="_blank" rel="noopener noreferrer"><span class="source-mark">↗</span><span><small>OFFICIAL WEBSITE</small><b>Telegram FAQ</b></span><span class="arrow">↗</span></a></article></main></div>
-<div id="toast" class="toast" role="status" hidden></div><div id="gate" class="gate" hidden><div class="gate-mark">✳</div><h1>Open in Telegram</h1><p>Launch this Help Desk from the bot to search with a verified Telegram session.</p><a href="https://t.me/TeleFQBot">Open @TeleFQBot</a></div></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f6fb">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Search official Telegram documentation and help articles.">
+  <title>Telegram Help Desk</title>
+  <link rel="stylesheet" href="./app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js?65"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 512 512" role="img" aria-label="Telegram"><path fill="currentColor" d="M126.3 153.6 252 209.2c3.2 1.5 7.2 1.3 12.2-1l123.8-54.7c6.6-2.4 2.9-9.8-2.3-9l-256.6-1.1c-7.2.3-9.2 7.5-2.8 10.2Zm-10.1 28.5 118.4 184c3.7 6 13.1 2.6 12.8-2.8l-.2-126.2c-.1-7.1-1.9-8.7-6.4-10.6l-118.4-52.7c-4.3-2.4-10.1 1.6-6.2 8.3Zm151.3 52.7.3 127c.1 8.5 8.6 10.1 13.5 2.9l102.9-159.4 2.2-3.4 1.9-2.9v-.1l10.8-16.6c3.3-5.5-1.9-11.8-9.7-8.1l-117.4 52.9c-.2.1-.4.2-.6.3-1.5.9-2.5 1.8-3 2.9-.7 1.2-.9 2.7-.9 4.5Z"/></svg>
+        </span>
+        <span><small>OFFICIAL TELEGRAM SOURCES</small><b>Help Desk</b></span>
+      </div>
+      <button id="profile" class="profile-trigger" type="button" aria-label="Open your Telegram profile">
+        <span id="profile-avatar" class="avatar avatar-small"><span class="avatar-fallback">?</span></span>
+      </button>
+    </header>
+
+    <main id="home" class="page page-home">
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="kicker"><i></i> THE TELEGRAM KNOWLEDGE LIBRARY</span>
+          <h1>Find your<br><em>Telegram answer.</em></h1>
+          <p>Clear, source-linked guidance from Telegram's official documentation.</p>
+          <div class="hero-proof"><span class="proof-check">✓</span> Official sources · Searchable answers</div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="paper paper-back"></div><div class="paper paper-mid"></div>
+          <div class="paper paper-front"><b>?</b><i></i><i></i><i></i></div>
+          <span class="sparkle sparkle-one">✦</span><span class="sparkle sparkle-two">✧</span>
+        </div>
+      </section>
+
+      <section class="search-section">
+        <div class="section-eyebrow">SEARCH THE KNOWLEDGE BASE</div>
+        <form id="search-form" class="search-form" role="search">
+          <span class="search-icon" aria-hidden="true"></span>
+          <input id="query" type="search" aria-label="Search Telegram help" placeholder="Ask about Telegram, privacy, Premium…" autocomplete="off">
+          <button id="clear" class="clear-button" type="button" aria-label="Clear search" hidden></button>
+          <button class="go-button" type="submit" aria-label="Search"><span class="icon icon-arrow"></span></button>
+        </form>
+        <div class="suggestions" aria-label="Popular searches">
+          <button type="button" data-query="Telegram Premium">Premium</button>
+          <button type="button" data-query="privacy settings">Privacy</button>
+          <button type="button" data-query="Telegram Stars">Stars</button>
+          <button type="button" data-query="Mini Apps">Mini Apps</button>
+        </div>
+      </section>
+
+      <section class="topics-section">
+        <div class="section-heading">
+          <div><div class="section-eyebrow">BROWSE THE LIBRARY</div><h2>Explore topics</h2></div>
+          <span id="count" class="count-label">Loading…</span>
+        </div>
+        <div id="categories" class="category-grid" aria-live="polite">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+      </section>
+
+      <section id="results" class="results-section" hidden>
+        <div class="section-heading">
+          <div><div id="result-label" class="section-eyebrow">OFFICIAL KNOWLEDGE</div><h2 id="result-title">Results</h2></div>
+          <button id="reset" class="text-button" type="button">Clear</button>
+        </div>
+        <div id="result-list" class="result-list"></div>
+      </section>
+      <footer class="app-footer"><span class="footer-mark">✳</span> Official knowledge. Clear answers. Original sources.</footer>
+    </main>
+
+    <main id="detail" class="page page-sub" hidden>
+      <article class="answer-card">
+        <div class="answer-meta"><span id="category" class="category-pill"></span><span class="verified"><span>✓</span> Official source</span></div>
+        <h1 id="title"></h1>
+        <p id="section" class="answer-section" hidden></p>
+        <div id="body" class="rich-content"></div>
+        <a id="source" class="source-card" target="_blank" rel="noopener noreferrer">
+          <span class="source-icon"><span class="icon icon-external"></span></span>
+          <span class="source-copy"><small>ORIGINAL REFERENCE</small><b id="source-title"></b></span>
+          <span class="source-arrow icon icon-chevron"></span>
+        </a>
+        <div class="answer-actions">
+          <button id="share" class="action-primary" type="button"><span class="icon icon-share"></span> Share answer</button>
+          <button id="copy" class="action-secondary" type="button"><span class="icon icon-copy"></span> Copy text</button>
+        </div>
+        <p class="share-hint">Telegram shows a preview and chat picker. Confirm Share to send the complete answer and source.</p>
+      </article>
+    </main>
+
+    <main id="profile-view" class="page page-sub" hidden>
+      <section class="profile-card">
+        <div class="profile-banner"><span class="banner-orbit"></span><span class="banner-mark">✳</span></div>
+        <div class="profile-content">
+          <div id="profile-large-avatar" class="avatar avatar-large"><span class="avatar-fallback">?</span></div>
+          <h1 id="profile-name">Telegram user</h1>
+          <p id="profile-username" class="profile-username"></p>
+          <div class="profile-details">
+            <div class="profile-detail-row"><span class="profile-detail-icon icon icon-globe"></span><span><small>LANGUAGE</small><b id="profile-language">—</b></span></div>
+            <div class="profile-detail-row"><span class="profile-detail-icon icon icon-shield"></span><span><small>SESSION</small><b>Verified by Telegram</b></span></div>
+          </div>
+          <p class="profile-note">Your profile details are shown locally from the Telegram Mini App session. They are not added to the public FAQ search.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="gate" class="gate" hidden>
+    <div class="gate-mark"><span class="brand-icon"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M126.3 153.6 252 209.2c3.2 1.5 7.2 1.3 12.2-1l123.8-54.7c6.6-2.4 2.9-9.8-2.3-9l-256.6-1.1c-7.2.3-9.2 7.5-2.8 10.2Zm-10.1 28.5 118.4 184c3.7 6 13.1 2.6 12.8-2.8l-.2-126.2c-.1-7.1-1.9-8.7-6.4-10.6l-118.4-52.7c-4.3-2.4-10.1 1.6-6.2 8.3Zm151.3 52.7.3 127c.1 8.5 8.6 10.1 13.5 2.9l102.9-159.4 2.2-3.4 1.9-2.9v-.1l10.8-16.6c3.3-5.5-1.9-11.8-9.7-8.1l-117.4 52.9c-.2.1-.4.2-.6.3-1.5.9-2.5 1.8-3 2.9-.7 1.2-.9 2.7-.9 4.5Z"/></svg></span></div>
+    <h1>Open in Telegram</h1>
+    <p>Launch this Help Desk from the bot to search with a verified Telegram session.</p>
+    <a href="https://t.me/TeleFQBot">Open @TeleFQBot</a>
+  </div>
+</body>
+</html>
