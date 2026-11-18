@@ -5,7 +5,7 @@ import { searchKnowledge } from '../scripts/search-engine.mjs';
 
 const DATA=path.join(process.cwd(),'data/knowledge.json');
 const CATEGORIES=path.join(process.cwd(),'config/categories.json');
-const MAX_AGE=86400;
+const MAX_AGE=86400;\nlet cachedKnowledge=null;\nlet cachedCategories=null;\nfunction stores(){\n  if(!cachedKnowledge)cachedKnowledge=JSON.parse(fs.readFileSync(DATA,'utf8'));\n  if(!cachedCategories)cachedCategories=JSON.parse(fs.readFileSync(CATEGORIES,'utf8'));\n  return {data:cachedKnowledge,config:cachedCategories};\n}
 function validateInitData(raw){
   if(typeof raw!=='string'||!raw||raw.length>8192) throw Object.assign(new Error('Open this Help Desk from Telegram to search.'),{status:401});
   const token=process.env.BOT_TOKEN;
@@ -29,7 +29,7 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
   if(req.method==='GET'){
     try{
-      const data=JSON.parse(fs.readFileSync(DATA,'utf8')), config=JSON.parse(fs.readFileSync(CATEGORIES,'utf8')), counts=new Map();
+      const {data,config}=stores(), counts=new Map();
       for(const item of data.items??[]){const key=String(item.category??'USER_HELP').toUpperCase();counts.set(key,(counts.get(key)??0)+1);}
       const categories=Object.entries(config).map(([id,description])=>({id,title:id.replaceAll('_',' ').toLowerCase().replace(/\b\p{L}/gu,c=>c.toUpperCase()),description,count:counts.get(id)??0})).filter(x=>x.count>0);
       return res.status(200).json({ok:true,bot:'TeleFQBot',total:data.items?.length??0,categories});
@@ -39,11 +39,11 @@ export default async function handler(req,res){
   try{
     const body=req.body&&typeof req.body==='object'?req.body:{}, user=validateInitData(body.initData);
     const query=typeof body.query==='string'?body.query.trim().slice(0,180):'', category=typeof body.category==='string'?body.category.toUpperCase():'';
-    const data=JSON.parse(fs.readFileSync(DATA,'utf8')), config=JSON.parse(fs.readFileSync(CATEGORIES,'utf8'));
+    const {data,config}=stores();
     if(category&&!Object.hasOwn(config,category))return res.status(400).json({ok:false,error:'Unknown category.'});
     let results=searchKnowledge(data.items??[],query,{minScore:24,diversify:true});
     if(category)results=results.filter(x=>String(x.category??'').toUpperCase()===category);
     if(!query)results=[...results].sort((a,b)=>Number(b.metadata?.priority??0)-Number(a.metadata?.priority??0));
-    return res.status(200).json({ok:true,query,category:category||null,count:results.length,user:{id:user.id},results:results.slice(0,30).map(publicItem)});
+    return res.status(200).json({ok:true,query,category:category||null,count:results.length,results:results.slice(0,30).map(publicItem)});
   }catch(error){const status=Number.isInteger(error?.status)?error.status:400;if(status>=500)console.error('Mini App search failed:',error);return res.status(status).json({ok:false,error:status>=500?'Search is temporarily unavailable.':error?.message??'Unable to search the Help Desk.'});}
 }
