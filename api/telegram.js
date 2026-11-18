@@ -412,7 +412,7 @@ function botUsername(profile) {
 }
 
 function parseCommand(text, username) {
-  const match = String(text ?? '').trim().match(/^\/(start|help|ping|admin)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
+  const match = String(text ?? '').trim().match(/^\/(start|help|ping|admin|app)(?:@([A-Za-z0-9_]{5,32}))?(?:\s+.*)?$/i);
   if (!match) return null;
   if (match[2] && username && match[2].toLowerCase() !== username.toLowerCase()) return null;
   return match[1].toLowerCase();
