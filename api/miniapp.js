@@ -6,6 +6,7 @@ import { searchKnowledge } from '../scripts/search-engine.mjs';
 const DATA=path.join(process.cwd(),'data/knowledge.json');
 const CATEGORIES=path.join(process.cwd(),'config/categories.json');
 const MAX_AGE=86400;
+const APP_VERSION=JSON.parse(fs.readFileSync(path.join(process.cwd(),'package.json'),'utf8')).version;
 let cachedKnowledge=null;
 let cachedCategories=null;
 function stores(){
@@ -63,7 +64,7 @@ function preparedAnswerHtml(item){
 async function savePreparedAnswer(user,item){
   const token=process.env.BOT_TOKEN;
   const result={type:'article',id:'faq-share-'+crypto.createHash('sha256').update(String(item.id??item.question??item.title)).digest('hex').slice(0,32),title:String(item.question??item.title??'Telegram documentation').slice(0,256),description:String((item.source?.title??'Official Telegram source')+' · '+(item.category??'Telegram help')).slice(0,255),input_message_content:{rich_message:{html:preparedAnswerHtml(item)}}};
-  const response=await fetch('https://api.telegram.org/bot'+token+'/savePreparedInlineMessage',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({user_id:user.id,result,allow_user_chats:true,allow_group_chats:true,allow_channel_chats:true})});
+  const response=await fetch('https://api.telegram.org/bot'+token+'/savePreparedInlineMessage',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({user_id:user.id,result,allow_user_chats:true,allow_bot_chats:true,allow_group_chats:true,allow_channel_chats:true})});
   const data=await response.json().catch(()=>null);
   if(!response.ok||!data?.ok||typeof data.result?.id!=='string')throw Object.assign(new Error('Telegram could not prepare this answer for sharing.'),{status:502});
   return {id:data.result.id,expiration_date:Number(data.result.expiration_date)||null};
@@ -77,7 +78,7 @@ export default async function handler(req,res){
       const {data,config}=stores(), counts=new Map();
       for(const item of data.items??[]){const key=String(item.category??'USER_HELP').toUpperCase();counts.set(key,(counts.get(key)??0)+1);}
       const categories=Object.entries(config).map(([id,description])=>({id,title:id.replaceAll('_',' ').toLowerCase().replace(/\b\p{L}/gu,c=>c.toUpperCase()),description,count:counts.get(id)??0})).filter(x=>x.count>0);
-      return res.status(200).json({ok:true,bot:'TeleFQBot',total:data.items?.length??0,categories});
+      return res.status(200).json({ok:true,bot:'TeleFQBot',version:APP_VERSION,total:data.items?.length??0,categories});
     }catch(error){console.error('Mini App bootstrap failed:',error);return res.status(500).json({ok:false,error:'The Help Desk could not load its knowledge index.'});}
   }
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({ok:false,error:'Method not allowed.'});}
