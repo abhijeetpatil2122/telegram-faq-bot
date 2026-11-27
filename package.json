@@ -12,14 +12,26 @@
   "scripts": {
     "postinstall": "node scripts/admin-source-diagnostics.mjs",
     "dev": "node --watch api/telegram.js",
+    "dev:miniapp": "vite --config miniapp/vite.config.ts",
+    "build:miniapp": "vite build --config miniapp/vite.config.ts",
+    "check:miniapp": "svelte-check --tsconfig miniapp/tsconfig.app.json && tsc -p miniapp/tsconfig.node.json",
     "crawl": "node scripts/crawl/index.mjs",
     "validate": "node scripts/validate-knowledge.mjs && node scripts/validate-rich-knowledge.mjs",
     "search:test": "node scripts/tests/search.mjs",
     "search:engine:test": "node scripts/tests/search-engine.mjs",
     "search:benchmark": "node scripts/tests/search-benchmark.mjs",
     "runtime:test": "node scripts/tests/runtime.mjs",
-    "check": "node scripts/admin-source-diagnostics.mjs && node --check api/telegram.js && node --check api/miniapp.js && node --check miniapp/app.js && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs && node --check scripts/tests/source-policy.mjs && npm run source-policy:test && npm run miniapp:test",
+    "check": "node scripts/admin-source-diagnostics.mjs && node --check api/telegram.js && node --check api/miniapp.js && npm run check:miniapp && node --check scripts/crawl/index.mjs && node --check scripts/validate-knowledge.mjs && node --check scripts/validate-rich-knowledge.mjs && node --check scripts/tests/search.mjs && node --check scripts/search-engine.mjs && node --check scripts/tests/search-engine.mjs && node --check scripts/tests/search-benchmark.mjs && node --check scripts/tests/runtime.mjs && node --check scripts/tests/source-policy.mjs && npm run source-policy:test && npm run miniapp:test",
     "source-policy:test": "node scripts/tests/source-policy.mjs",
     "miniapp:test": "node scripts/tests/miniapp.mjs"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tsconfig/svelte": "^5.0.9",
+    "@types/node": "^26.6.11",
+    "svelte": "^5.59.2",
+    "svelte-check": "^4.7.8",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.8"
   }
 }

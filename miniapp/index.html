@@ -1,133 +1,15 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f2f2f7">
-  <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Search official Telegram documentation and help articles.">
-  <title>Telegram Help Desk</title>
-  <link rel="stylesheet" href="./app.css">
-  <script src="https://telegram.org/js/telegram-web-app.js?65"></script>
-  <script defer src="./app.js"></script>
-</head>
-<body>
-  <div class="shell">
-    <header class="topbar">
-      <a class="brand" href="#home" aria-label="Telegram Help home" data-tab="home">
-        <img src="./telegram.svg" alt="" aria-hidden="true">
-        <span>Help<span class="brand-dot">.</span></span>
-      </a>
-      <span class="official-badge"><span aria-hidden="true"></span> Official sources</span>
-      <button id="profile" class="profile-trigger" type="button" aria-label="Open your Telegram profile">
-        <span id="profile-avatar" class="avatar avatar-small"><span class="avatar-fallback">?</span></span>
-      </button>
-    </header>
-
-    <main id="home" class="page page-home">
-      <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow"><span class="eyebrow-line"></span> TELEGRAM KNOWLEDGE BASE</p>
-        <h1 id="hero-title">Answers,<br>without the <span>scroll.</span></h1>
-        <p class="hero-note">Straight from Telegram. Find what you need, then get back to your conversation.</p>
-      </section>
-
-      <section class="search-section" aria-label="Search official Telegram help">
-        <form id="search-form" class="search-form" role="search">
-          <span class="search-icon" aria-hidden="true"></span>
-          <input id="query" type="search" aria-label="Search Telegram help" placeholder="Search Telegram help" autocomplete="off">
-          <button id="clear" class="clear-button" type="button" aria-label="Clear search" hidden></button>
-          <button class="go-button" type="submit" aria-label="Search"></button>
-        </form>
-        <div class="suggestions" aria-label="Popular searches">
-          <button type="button" data-query="Telegram Premium"><span class="suggestion-dot dot-premium"></span>Premium</button>
-          <button type="button" data-query="privacy settings"><span class="suggestion-dot dot-privacy"></span>Privacy</button>
-          <button type="button" data-query="Telegram Stars"><span class="suggestion-dot dot-stars"></span>Stars</button>
-          <button type="button" data-query="Mini Apps"><span class="suggestion-dot dot-apps"></span>Mini Apps</button>
-        </div>
-      </section>
-
-      <section class="topics-section" aria-labelledby="topics-title">
-        <div class="section-heading">
-          <div><p class="eyebrow">A GOOD PLACE TO START</p><h2 id="topics-title">Browse topics</h2></div>
-          <button class="text-button" type="button" data-tab="library">All topics <span aria-hidden="true">›</span></button>
-        </div>
-        <div id="home-categories" class="topic-list" aria-live="polite">
-          <div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div>
-        </div>
-        <p class="index-note"><span class="index-dot" aria-hidden="true"></span><span><b id="count">Loading…</b><br>answers from official Telegram sources</span></p>
-      </section>
-    </main>
-
-    <main id="library" class="page page-library" hidden>
-      <p class="eyebrow">THE WHOLE LIBRARY</p>
-      <h1 class="page-title">Explore</h1>
-      <p class="page-subtitle">Pick a topic to find the official answer.</p>
-      <div id="categories" class="topic-list topic-list-library" aria-live="polite"></div>
-    </main>
-
-    <main id="results-page" class="page page-results" hidden>
-      <div class="results-toolbar">
-        <button id="reset" class="text-button" type="button"><span aria-hidden="true">‹</span> Back</button>
-        <span class="official-badge"><span aria-hidden="true"></span> Telegram</span>
-      </div>
-      <section id="results" class="results-section" aria-labelledby="result-title">
-        <p id="result-label" class="eyebrow">OFFICIAL KNOWLEDGE</p>
-        <h1 id="result-title" class="page-title">Results</h1>
-        <div id="result-list" class="result-list" aria-live="polite"></div>
-      </section>
-    </main>
-
-    <main id="detail" class="page page-detail" hidden>
-      <article class="answer-page">
-        <button id="detail-back" class="detail-back" type="button"><span aria-hidden="true">‹</span> Back to answers</button>
-        <div class="answer-meta"><span id="category" class="category-pill"></span><span class="verified-mark" aria-label="Verified official source">✓</span></div>
-        <h1 id="title"></h1>
-        <p id="section" class="answer-section" hidden></p>
-        <div id="body" class="rich-content"></div>
-        <a id="source" class="source-link" target="_blank" rel="noopener noreferrer">
-          <span class="source-mark" aria-hidden="true">↗</span>
-          <span><small>READ THE ORIGINAL</small><b id="source-title"></b></span>
-          <span class="source-arrow" aria-hidden="true">›</span>
-        </a>
-        <div class="answer-actions">
-          <button id="share" class="action-primary" type="button"><span class="icon icon-share" aria-hidden="true"></span> Share answer</button>
-          <button id="copy" class="action-secondary" type="button"><span class="icon icon-copy" aria-hidden="true"></span> Copy</button>
-        </div>
-        <p class="share-hint">Choose a chat in Telegram to share the answer and its source.</p>
-      </article>
-    </main>
-
-    <main id="profile-view" class="page page-profile" hidden>
-      <p class="eyebrow">YOUR MINI APP</p>
-      <div class="profile-intro">
-        <div id="profile-large-avatar" class="avatar avatar-large"><span class="avatar-fallback">?</span></div>
-        <div><h1 id="profile-name">Telegram user</h1><p id="profile-username" class="profile-username"></p></div>
-      </div>
-      <div class="profile-status"><span class="status-check" aria-hidden="true">✓</span><span><b>Official knowledge</b><small>Every answer links to its original source</small></span><span class="status-tag">VERIFIED</span></div>
-      <section class="profile-section" aria-label="About this Mini App">
-        <h2>About</h2>
-        <div class="profile-row"><span class="profile-symbol symbol-blue" aria-hidden="true">Aa</span><span><small>LANGUAGE</small><b id="profile-language">—</b></span></div>
-        <div class="profile-row"><span class="profile-symbol symbol-violet" aria-hidden="true">#</span><span><small>KNOWLEDGE BASE</small><b id="profile-count">—</b></span></div>
-        <div class="profile-row"><span class="profile-symbol symbol-blue" aria-hidden="true">v</span><span><small>APP VERSION</small><b id="profile-version">—</b></span></div>
-        <a class="profile-row profile-link" href="https://t.me/TeleFQBot" target="_blank" rel="noopener noreferrer"><span class="profile-symbol symbol-green" aria-hidden="true">↗</span><span><small>YOUR BOT</small><b>TeleFQBot · @TeleFQBot</b></span><span class="row-chevron" aria-hidden="true">›</span></a>
-      </section>
-      <p class="profile-note">Your profile information comes from this Telegram session and stays out of public FAQ search.</p>
-    </main>
-  </div>
-
-  <nav id="tabbar" class="tabbar" aria-label="Main navigation">
-    <button class="tab-item is-active" type="button" data-tab="home" aria-current="page"><span class="tab-icon icon-home" aria-hidden="true"></span><span>Today</span></button>
-    <button class="tab-item" type="button" data-tab="library"><span class="tab-icon icon-grid" aria-hidden="true"></span><span>Topics</span></button>
-    <button class="tab-item" type="button" data-tab="profile-view"><span class="tab-icon icon-user" aria-hidden="true"></span><span>You</span></button>
-  </nav>
-
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <div id="gate" class="gate" hidden>
-    <div class="gate-icon"><img src="./telegram.svg" alt="" aria-hidden="true"></div>
-    <p class="eyebrow">A TELEGRAM MINI APP</p>
-    <h1>Open in Telegram</h1>
-    <p>Launch Help from the bot to browse the verified knowledge base.</p>
-    <a href="https://t.me/TeleFQBot">Open @TeleFQBot <span aria-hidden="true">↗</span></a>
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f4f5" />
+    <meta name="description" content="Search official Telegram help and answers, right inside Telegram." />
+    <title>Telegram Help Desk</title>
+    <script src="https://telegram.org/js/telegram-web-app.js?65"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
